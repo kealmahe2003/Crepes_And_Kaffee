@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración - Crêpes & Kaffee</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/configuracion.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 class="sidebar-title">MENÚ PRINCIPAL</h1>
+                <div class="sidebar-subtitle">Sistema POS</div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <div class="nav-item">
+                    <a href="dashboard.html" class="nav-link">
+                        <i class="fas fa-tachometer-alt"></i>
+                        Dashboard
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="ventas.html" class="nav-link">
+                        <i class="fas fa-cash-register"></i>
+                        Ventas
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="pedidos.html" class="nav-link">
+                        <i class="fas fa-clipboard-list"></i>
+                        Pedidos
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="mesas.html" class="nav-link">
+                        <i class="fas fa-chair"></i>
+                        Mesas
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="estadisticas.html" class="nav-link">
+                        <i class="fas fa-chart-bar"></i>
+                        Estadísticas
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="configuracion.html" class="nav-link active">
+                        <i class="fas fa-cog"></i>
+                        Configuración
+                    </a>
+                </div>
+            </nav>
+            
+            <a href="login.html" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                Cerrar Sesión
+            </a>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="page-header">
+                <h1 class="page-title">Configuración del Sistema</h1>
+                <p class="page-subtitle">Gestiona las configuraciones del restaurante</p>
+            </header>
+            
+            <div class="page-content">
+                <!-- Navegación de Configuración -->
+                <div class="config-nav mb-4">
+                    <button class="config-tab active" data-tab="general">
+                        <i class="fas fa-cogs"></i>
+                        General
+                    </button>
+                    <button class="config-tab" data-tab="productos">
+                        <i class="fas fa-box"></i>
+                        Productos
+                    </button>
+                    <button class="config-tab" data-tab="usuarios">
+                        <i class="fas fa-users"></i>
+                        Usuarios
+                    </button>
+                    <button class="config-tab" data-tab="impresoras">
+                        <i class="fas fa-print"></i>
+                        Impresoras
+                    </button>
+                    <button class="config-tab" data-tab="backup">
+                        <i class="fas fa-database"></i>
+                        Respaldos
+                    </button>
+                </div>
+
+                <!-- Configuración General -->
+                <div class="config-section active" id="general">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Información del Restaurante</h3>
+                        </div>
+                        <div class="card-body">
+                            <form class="config-form">
+                                <div class="grid grid-2">
+                                    <div class="form-group">
+                                        <label for="restaurantName">Nombre del Restaurante</label>
+                                        <input type="text" id="restaurantName" class="form-input" value="Crêpes & Kaffee">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="restaurantPhone">Teléfono</label>
+                                        <input type="tel" id="restaurantPhone" class="form-input" value="+1 234 567 8900">
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="restaurantAddress">Dirección</label>
+                                    <textarea id="restaurantAddress" class="form-textarea" rows="3">Calle Principal 123, Ciudad, Estado 12345</textarea>
+                                </div>
+                                
+                                <div class="grid grid-2">
+                                    <div class="form-group">
+                                        <label for="currency">Moneda</label>
+                                        <select id="currency" class="form-select">
+                                            <option value="USD">Dólar ($)</option>
+                                            <option value="EUR">Euro (€)</option>
+                                            <option value="COP">Peso Colombiano ($)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="timezone">Zona Horaria</label>
+                                        <select id="timezone" class="form-select">
+                                            <option value="UTC-6">México (UTC-6)</option>
+                                            <option value="UTC-5">Colombia (UTC-5)</option>
+                                            <option value="UTC-3">Argentina (UTC-3)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-actions">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save"></i>
+                                        Guardar Cambios
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Configuración de Operación</h3>
+                        </div>
+                        <div class="card-body">
+                            <form class="config-form">
+                                <div class="grid grid-2">
+                                    <div class="form-group">
+                                        <label for="openTime">Hora de Apertura</label>
+                                        <input type="time" id="openTime" class="form-input" value="08:00">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="closeTime">Hora de Cierre</label>
+                                        <input type="time" id="closeTime" class="form-input" value="22:00">
+                                    </div>
+                                </div>
+                                
+                                <div class="grid grid-1">
+                                    <div class="form-group">
+                                        <label for="serviceCharge">Cargo por Servicio (%)</label>
+                                        <input type="number" id="serviceCharge" class="form-input" value="10" min="0" max="100" step="0.01">
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <div class="checkbox-group">
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" id="autoCloseOrders" checked>
+                                            <span class="checkmark"></span>
+                                            Cerrar pedidos automáticamente después de 2 horas
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-actions">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save"></i>
+                                        Guardar Configuración
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gestión de Productos -->
+                <div class="config-section" id="productos">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Gestión de Productos</h3>
+                            <button class="btn btn-primary" onclick="showAddProductModal()">
+                                <i class="fas fa-plus"></i>
+                                Nuevo Producto
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="products-grid" id="productsGrid">
+                                <!-- Los productos se cargan dinámicamente -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Categorías</h3>
+                            <button class="btn btn-secondary" onclick="showAddCategoryModal()">
+                                <i class="fas fa-plus"></i>
+                                Nueva Categoría
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="categories-list" id="categoriesList">
+                                <!-- Las categorías se cargan dinámicamente -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gestión de Usuarios -->
+                <div class="config-section" id="usuarios">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Usuarios del Sistema</h3>
+                            <button class="btn btn-primary" onclick="showAddUserModal()">
+                                <i class="fas fa-user-plus"></i>
+                                Nuevo Usuario
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="users-table">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Usuario</th>
+                                            <th>Nombre</th>
+                                            <th>Rol</th>
+                                            <th>Estado</th>
+                                            <th>Último Acceso</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="usersTableBody">
+                                        <!-- Los usuarios se cargan dinámicamente -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configuración de Impresoras -->
+                <div class="config-section" id="impresoras">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Configuración de Impresoras</h3>
+                            <button class="btn btn-primary" onclick="detectPrinters()">
+                                <i class="fas fa-search"></i>
+                                Detectar Impresoras
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="printers-config">
+                                <div class="printer-item">
+                                    <div class="printer-info">
+                                        <h4>Impresora de Recibos</h4>
+                                        <p>Para tickets de venta</p>
+                                    </div>
+                                    <div class="printer-controls">
+                                        <select class="form-select">
+                                            <option>Seleccionar impresora...</option>
+                                            <option>Impresora Térmica USB</option>
+                                            <option>Impresora de Red 192.168.1.100</option>
+                                        </select>
+                                        <button class="btn btn-secondary" onclick="testPrint('receipts')">
+                                            <i class="fas fa-print"></i>
+                                            Probar
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="printer-item">
+                                    <div class="printer-info">
+                                        <h4>Impresora de Cocina</h4>
+                                        <p>Para órdenes de cocina</p>
+                                    </div>
+                                    <div class="printer-controls">
+                                        <select class="form-select">
+                                            <option>Seleccionar impresora...</option>
+                                            <option>Impresora Cocina USB</option>
+                                            <option>Impresora de Red 192.168.1.101</option>
+                                        </select>
+                                        <button class="btn btn-secondary" onclick="testPrint('kitchen')">
+                                            <i class="fas fa-print"></i>
+                                            Probar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="print-settings">
+                                <h4>Configuración de Impresión</h4>
+                                <div class="grid grid-2">
+                                    <div class="form-group">
+                                        <label>Tamaño de Papel (Recibos)</label>
+                                        <select class="form-select">
+                                            <option>80mm</option>
+                                            <option>58mm</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Copias por Ticket</label>
+                                        <input type="number" class="form-input" value="1" min="1" max="5">
+                                    </div>
+                                </div>
+                                
+                                <div class="checkbox-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" checked>
+                                        <span class="checkmark"></span>
+                                        Imprimir automáticamente en cocina
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox">
+                                        <span class="checkmark"></span>
+                                        Imprimir recibo automáticamente
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Respaldos y Mantenimiento -->
+                <div class="config-section" id="backup">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Respaldos de Datos</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="backup-actions">
+                                <div class="backup-item">
+                                    <div class="backup-info">
+                                        <h4>Crear Respaldo Manual</h4>
+                                        <p>Genera un respaldo completo de todos los datos</p>
+                                    </div>
+                                    <button class="btn btn-primary" onclick="createBackup()">
+                                        <i class="fas fa-download"></i>
+                                        Crear Respaldo
+                                    </button>
+                                </div>
+                                
+                                <div class="backup-item">
+                                    <div class="backup-info">
+                                        <h4>Restaurar Datos</h4>
+                                        <p>Restaura datos desde un archivo de respaldo</p>
+                                    </div>
+                                    <div class="backup-controls">
+                                        <input type="file" id="restoreFile" accept=".json" style="display: none;">
+                                        <button class="btn btn-secondary" onclick="selectRestoreFile()">
+                                            <i class="fas fa-upload"></i>
+                                            Seleccionar Archivo
+                                        </button>
+                                        <button class="btn btn-warning" onclick="restoreBackup()" disabled>
+                                            <i class="fas fa-upload"></i>
+                                            Restaurar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="backup-schedule">
+                                <h4>Respaldos Automáticos</h4>
+                                <div class="form-group">
+                                    <div class="checkbox-group">
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" id="autoBackup" checked>
+                                            <span class="checkmark"></span>
+                                            Crear respaldos automáticos diarios
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Hora del respaldo automático</label>
+                                    <input type="time" class="form-input" value="02:00">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Mantenimiento del Sistema</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="maintenance-actions">
+                                <div class="maintenance-item">
+                                    <div class="maintenance-info">
+                                        <h4>Limpiar Datos Antiguos</h4>
+                                        <p>Elimina pedidos y datos antiguos para optimizar el rendimiento</p>
+                                    </div>
+                                    <button class="btn btn-warning" onclick="cleanOldData()">
+                                        <i class="fas fa-broom"></i>
+                                        Limpiar Datos
+                                    </button>
+                                </div>
+                                
+                                <div class="maintenance-item">
+                                    <div class="maintenance-info">
+                                        <h4>Reiniciar Sistema</h4>
+                                        <p>Reinicia la aplicación para aplicar cambios pendientes</p>
+                                    </div>
+                                    <button class="btn btn-danger" onclick="restartSystem()">
+                                        <i class="fas fa-power-off"></i>
+                                        Reiniciar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal para Producto -->
+    <div class="modal" id="productModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="productModalTitle">Nuevo Producto</h3>
+                <button class="modal-close" onclick="closeModal('productModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="productForm">
+                    <div class="form-group">
+                        <label for="productName">Nombre del Producto</label>
+                        <input type="text" id="productName" class="form-input" required>
+                    </div>
+                    
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label for="productPrice">Precio</label>
+                            <input type="number" id="productPrice" class="form-input" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="productCost">Costo</label>
+                            <input type="number" id="productCost" class="form-input" step="0.01" min="0">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="productCategory">Categoría</label>
+                        <select id="productCategory" class="form-select" required>
+                            <option value="">Seleccionar categoría</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="productDescription">Descripción</label>
+                        <textarea id="productDescription" class="form-textarea" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="productAvailable" checked>
+                                <span class="checkmark"></span>
+                                Disponible para venta
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('productModal')">Cancelar</button>
+                <button type="submit" form="productForm" class="btn btn-primary">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/database.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/auth-guard.js"></script>
+    <script src="assets/js/configuracion.js"></script>
+    
+    <script>
+        function logout() {
+            authGuard.handleLogout();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Crêpes & Kaffee</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/dashboard.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 class="sidebar-title">MENÚ PRINCIPAL</h1>
+                <div class="sidebar-subtitle">Sistema POS</div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <div class="nav-item">
+                    <a href="dashboard.html" class="nav-link active">
+                        <i class="fas fa-tachometer-alt"></i>
+                        Dashboard
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="ventas.html" class="nav-link">
+                        <i class="fas fa-cash-register"></i>
+                        Ventas
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="pedidos.html" class="nav-link">
+                        <i class="fas fa-clipboard-list"></i>
+                        Pedidos
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="mesas.html" class="nav-link">
+                        <i class="fas fa-chair"></i>
+                        Mesas
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="estadisticas.html" class="nav-link">
+                        <i class="fas fa-chart-bar"></i>
+                        Estadísticas
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="configuracion.html" class="nav-link">
+                        <i class="fas fa-cog"></i>
+                        Configuración
+                    </a>
+                </div>
+            </nav>
+            
+            <a href="login.html" class="logout-btn" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                Cerrar Sesión
+            </a>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="page-header">
+                <div class="header-content">
+                    <div class="header-info">
+                        <h1 class="page-title">Dashboard - Crêpes & Kaffee</h1>
+                        <p class="page-subtitle">Panel de control y resumen del día</p>
+                    </div>
+                    <div class="header-stats">
+                        <div class="current-time">
+                            <i class="fas fa-clock"></i>
+                            <span id="currentTime"></span>
+                        </div>
+                        <div class="current-date">
+                            <i class="fas fa-calendar"></i>
+                            <span id="currentDate"></span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <div class="page-content">
+                <!-- Estadísticas Rápidas -->
+                <div class="stats-grid">
+                    <div class="stat-card sales">
+                        <div class="stat-icon">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 class="stat-title">Ventas del Día</h3>
+                            <div class="stat-value" id="dailySales">$0</div>
+                            <div class="stat-change positive">
+                                <i class="fas fa-arrow-up"></i>
+                                <span>+15% vs ayer</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card orders">
+                        <div class="stat-icon">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 class="stat-title">Pedidos Hoy</h3>
+                            <div class="stat-value" id="dailyOrders">0</div>
+                            <div class="stat-change positive">
+                                <i class="fas fa-arrow-up"></i>
+                                <span>+8% vs ayer</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card customers">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 class="stat-title">Clientes Atendidos</h3>
+                            <div class="stat-value" id="dailyCustomers">0</div>
+                            <div class="stat-change positive">
+                                <i class="fas fa-arrow-up"></i>
+                                <span>+12% vs ayer</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card tables">
+                        <div class="stat-icon">
+                            <i class="fas fa-chair"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 class="stat-title">Mesas Ocupadas</h3>
+                            <div class="stat-value" id="occupiedTables">0/12</div>
+                            <div class="stat-change neutral">
+                                <i class="fas fa-minus"></i>
+                                <span>Estable</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección Principal -->
+                <div class="dashboard-grid">
+                    <!-- Panel de Pedidos Recientes -->
+                    <div class="dashboard-panel">
+                        <div class="panel-header">
+                            <h2 class="panel-title">
+                                <i class="fas fa-clock"></i>
+                                Pedidos Recientes
+                            </h2>
+                            <a href="pedidos.html" class="panel-link">Ver todos</a>
+                        </div>
+                        <div class="panel-content">
+                            <div id="recentOrders" class="orders-list">
+                                <div class="empty-state">
+                                    <i class="fas fa-clipboard-list"></i>
+                                    <p>No hay pedidos recientes</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Panel de Productos Populares -->
+                    <div class="dashboard-panel">
+                        <div class="panel-header">
+                            <h2 class="panel-title">
+                                <i class="fas fa-star"></i>
+                                Productos Populares
+                            </h2>
+                            <a href="configuracion.html" class="panel-link">Gestionar</a>
+                        </div>
+                        <div class="panel-content">
+                            <div id="popularProducts" class="products-list">
+                                <div class="empty-state">
+                                    <i class="fas fa-box"></i>
+                                    <p>Cargando productos...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Panel de Acciones Rápidas -->
+                    <div class="dashboard-panel quick-actions">
+                        <div class="panel-header">
+                            <h2 class="panel-title">
+                                <i class="fas fa-bolt"></i>
+                                Acciones Rápidas
+                            </h2>
+                        </div>
+                        <div class="panel-content">
+                            <div class="actions-grid">
+                                <a href="ventas.html" class="action-btn sales-btn">
+                                    <i class="fas fa-cash-register"></i>
+                                    <span>Nueva Venta</span>
+                                </a>
+                                <a href="pedidos.html" class="action-btn orders-btn">
+                                    <i class="fas fa-plus-circle"></i>
+                                    <span>Nuevo Pedido</span>
+                                </a>
+                                <a href="mesas.html" class="action-btn tables-btn">
+                                    <i class="fas fa-chair"></i>
+                                    <span>Ver Mesas</span>
+                                </a>
+                                <a href="configuracion.html" class="action-btn config-btn">
+                                    <i class="fas fa-cog"></i>
+                                    <span>Configuración</span>
+                                </a>
+                                <a href="estadisticas.html" class="action-btn stats-btn">
+                                    <i class="fas fa-chart-line"></i>
+                                    <span>Reportes</span>
+                                </a>
+                                <button onclick="printDailyReport()" class="action-btn print-btn">
+                                    <i class="fas fa-print"></i>
+                                    <span>Imprimir Reporte</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Panel de Estado del Sistema -->
+                    <div class="dashboard-panel system-status">
+                        <div class="panel-header">
+                            <h2 class="panel-title">
+                                <i class="fas fa-server"></i>
+                                Estado del Sistema
+                            </h2>
+                        </div>
+                        <div class="panel-content">
+                            <div class="status-list">
+                                <div class="status-item">
+                                    <div class="status-indicator online"></div>
+                                    <span class="status-label">Base de Datos</span>
+                                    <span class="status-value">Operativa</span>
+                                </div>
+                                <div class="status-item">
+                                    <div class="status-indicator online"></div>
+                                    <span class="status-label">Sistema POS</span>
+                                    <span class="status-value">Funcionando</span>
+                                </div>
+                                <div class="status-item">
+                                    <div class="status-indicator warning"></div>
+                                    <span class="status-label">Impresora</span>
+                                    <span class="status-value">Verificar</span>
+                                </div>
+                                <div class="status-item">
+                                    <div class="status-indicator online"></div>
+                                    <span class="status-label">Conexión</span>
+                                    <span class="status-value">Estable</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/database.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/auth-guard.js"></script>
+    <script src="assets/js/dashboard.js"></script>
+    
+    <script>
+        function logout() {
+            authGuard.handleLogout();
+        }
+
+        function printDailyReport() {
+            window.print();
+        }
+    </script>
+</body>
+</html>

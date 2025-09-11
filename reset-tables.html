@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Mesas - Debug</title>
+</head>
+<body>
+    <h1>Debug - Reset Mesas</h1>
+    <button onclick="resetTables()">Resetear Mesas</button>
+    <button onclick="showTables()">Mostrar Mesas</button>
+    <pre id="output"></pre>
+
+    <script src="assets/js/database.js"></script>
+    <script>
+        function resetTables() {
+            // Limpiar tablas existentes
+            localStorage.removeItem('pos_tables');
+            
+            // Crear nuevas mesas
+            const db = new Database();
+            const output = document.getElementById('output');
+            output.textContent = 'Mesas reseteadas. Nuevas mesas creadas.';
+            showTables();
+        }
+
+        function showTables() {
+            const db = new Database();
+            const tables = db.getTables();
+            const output = document.getElementById('output');
+            output.textContent = JSON.stringify(tables, null, 2);
+        }
+
+        // Mostrar mesas al cargar
+        window.onload = showTables;
+    </script>
+</body>
+</html>
