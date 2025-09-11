@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mesas - Crêpes & Kaffee</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/mesas.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 class="sidebar-title">MENÚ PRINCIPAL</h1>
+                <div class="sidebar-subtitle">Sistema POS</div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <div class="nav-item">
+                    <a href="dashboard.html" class="nav-link">
+                        <i class="fas fa-tachometer-alt"></i>
+                        Dashboard
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="ventas.html" class="nav-link">
+                        <i class="fas fa-cash-register"></i>
+                        Ventas
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="pedidos.html" class="nav-link">
+                        <i class="fas fa-clipboard-list"></i>
+                        Pedidos
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="mesas.html" class="nav-link active">
+                        <i class="fas fa-chair"></i>
+                        Mesas
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="estadisticas.html" class="nav-link">
+                        <i class="fas fa-chart-bar"></i>
+                        Estadísticas
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="configuracion.html" class="nav-link">
+                        <i class="fas fa-cog"></i>
+                        Configuración
+                    </a>
+                </div>
+            </nav>
+            
+            <a href="login.html" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                Cerrar Sesión
+            </a>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="page-header">
+                <h1 class="page-title">Gestión de Mesas</h1>
+                <p class="page-subtitle">Control de ocupación y estado de mesas</p>
+            </header>
+            
+            <div class="page-content">
+                <!-- Stats de Mesas -->
+                <div class="tables-stats mb-4">
+                    <div class="stat-card available">
+                        <div class="stat-icon">
+                            <i class="fas fa-chair"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="availableTables">0</span>
+                            <span class="stat-label">Libres</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card occupied">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="occupiedTables">0</span>
+                            <span class="stat-label">Ocupadas</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card reserved">
+                        <div class="stat-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="reservedTables">0</span>
+                            <span class="stat-label">Reservadas</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card cleaning">
+                        <div class="stat-icon">
+                            <i class="fas fa-broom"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="cleaningTables">0</span>
+                            <span class="stat-label">Limpieza</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card total">
+                        <div class="stat-icon">
+                            <i class="fas fa-list"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="totalTables">0</span>
+                            <span class="stat-label">Total</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card occupancy">
+                        <div class="stat-icon">
+                            <i class="fas fa-percentage"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="occupancyRate">0%</span>
+                            <span class="stat-label">Ocupación</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filtros -->
+                <div class="filters-section mb-4">
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-filter="todas">
+                            <i class="fas fa-list"></i>
+                            Todas <span class="filter-count">0</span>
+                        </button>
+                        <button class="filter-btn" data-filter="libre">
+                            <i class="fas fa-check-circle"></i>
+                            Libres <span class="filter-count">0</span>
+                        </button>
+                        <button class="filter-btn" data-filter="ocupada">
+                            <i class="fas fa-user-friends"></i>
+                            Ocupadas <span class="filter-count">0</span>
+                        </button>
+                        <button class="filter-btn" data-filter="reservada">
+                            <i class="fas fa-clock"></i>
+                            Reservadas <span class="filter-count">0</span>
+                        </button>
+                        <button class="filter-btn" data-filter="limpieza">
+                            <i class="fas fa-broom"></i>
+                            Limpieza <span class="filter-count">0</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Búsqueda -->
+                    <div class="search-section">
+                        <div class="search-input-container">
+                            <i class="fas fa-search search-icon"></i>
+                            <input type="text" id="searchTables" class="search-input" placeholder="Buscar mesa...">
+                        </div>
+                    </div>
+                    
+                    <button class="btn btn-primary" onclick="showAddTableModal()">
+                        <i class="fas fa-plus"></i>
+                        Agregar Mesa
+                    </button>
+                </div>
+                
+                <!-- Grid de Mesas -->
+                <div class="tables-grid" id="tablesGrid">
+                    <!-- Las mesas se cargan dinámicamente -->
+                </div>
+                
+                <!-- Estado vacío -->
+                <div class="empty-tables" id="emptyTables" style="display: none;">
+                    <i class="fas fa-chair"></i>
+                    <h3>No hay mesas configuradas</h3>
+                    <p>Agrega mesas para comenzar a gestionar el restaurante</p>
+                    <button class="btn btn-primary" onclick="showAddTableModal()">
+                        <i class="fas fa-plus"></i>
+                        Agregar Primera Mesa
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal para Agregar Mesa -->
+    <div id="tableModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="tableModalTitle">Agregar Nueva Mesa</h3>
+                <button class="modal-close" onclick="closeModal('tableModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="tableForm">
+                    <div class="form-group">
+                        <label class="form-label" for="tableNumber">Número de Mesa</label>
+                        <input type="number" id="tableNumber" class="form-input" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="tableCapacity">Capacidad (personas)</label>
+                        <select id="tableCapacity" class="form-select" required>
+                            <option value="">Seleccionar capacidad</option>
+                            <option value="2">2 personas</option>
+                            <option value="4">4 personas</option>
+                            <option value="6">6 personas</option>
+                            <option value="8">8 personas</option>
+                            <option value="10">10 personas</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="tableLocation">Ubicación</label>
+                        <select id="tableLocation" class="form-select" required>
+                            <option value="">Seleccionar ubicación</option>
+                            <option value="Interior">Interior</option>
+                            <option value="Terraza">Terraza</option>
+                            <option value="Ventana">Junto a ventana</option>
+                            <option value="Privado">Área privada</option>
+                        </select>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('tableModal')">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i>
+                            Guardar Mesa
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Detalles de Mesa -->
+    <div id="tableDetailsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="tableDetailsTitle">Detalles de Mesa</h3>
+                <button class="modal-close" onclick="closeTableDetailsModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="tableDetailsBody">
+                <!-- Contenido se carga dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/database.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/auth-guard.js"></script>
+    <script src="assets/js/mesas.js"></script>
+    
+    <script>
+        function logout() {
+            authGuard.handleLogout();
+        }
+    </script>
+</body>
+</html>

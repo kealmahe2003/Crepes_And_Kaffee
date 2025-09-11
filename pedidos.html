@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedidos - Crêpes & Kaffee</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/pedidos.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 class="sidebar-title">MENÚ PRINCIPAL</h1>
+                <div class="sidebar-subtitle">Sistema POS</div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <div class="nav-item">
+                    <a href="dashboard.html" class="nav-link">
+                        <i class="fas fa-tachometer-alt"></i>
+                        Dashboard
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="ventas.html" class="nav-link">
+                        <i class="fas fa-cash-register"></i>
+                        Ventas
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="pedidos.html" class="nav-link active">
+                        <i class="fas fa-clipboard-list"></i>
+                        Pedidos
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="mesas.html" class="nav-link">
+                        <i class="fas fa-chair"></i>
+                        Mesas
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="estadisticas.html" class="nav-link">
+                        <i class="fas fa-chart-bar"></i>
+                        Estadísticas
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="configuracion.html" class="nav-link">
+                        <i class="fas fa-cog"></i>
+                        Configuración
+                    </a>
+                </div>
+            </nav>
+            
+            <a href="login.html" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                Cerrar Sesión
+            </a>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="page-header">
+                <h1 class="page-title">Pedidos</h1>
+                <p class="page-subtitle">Gestión de órdenes activas por mesa</p>
+            </header>
+            
+            <div class="page-content">
+                <div class="orders-header">
+                    <div class="orders-stats">
+                        <div class="stat-item">
+                            <span class="stat-value" id="totalOrders">0</span>
+                            <span class="stat-label">Pedidos Activos</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="pendingOrders">0</span>
+                            <span class="stat-label">Pendientes</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="totalRevenue">$0.00</span>
+                            <span class="stat-label">Total en Proceso</span>
+                        </div>
+                    </div>
+                    
+                    <div class="orders-filters">
+                        <div class="search-container">
+                            <input type="text" id="search-orders" class="search-input" placeholder="Buscar por ID, cliente o mesa...">
+                            <i class="fas fa-search search-icon"></i>
+                        </div>
+                        
+                        <div class="filter-buttons">
+                            <button class="filter-btn active" data-filter="all">
+                                <i class="fas fa-list"></i>
+                                Todos
+                            </button>
+                            <button class="filter-btn" data-filter="pending">
+                                <i class="fas fa-clock"></i>
+                                Pendientes
+                            </button>
+                            <button class="filter-btn" data-filter="preparing">
+                                <i class="fas fa-utensils"></i>
+                                Preparando
+                            </button>
+                            <button class="filter-btn" data-filter="ready">
+                                <i class="fas fa-check"></i>
+                                Listos
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="orders-grid" id="ordersGrid">
+                    <!-- Las órdenes se cargan dinámicamente -->
+                </div>
+                
+                <div class="empty-orders" id="emptyOrders" style="display: none;">
+                    <i class="fas fa-clipboard-list"></i>
+                    <h3>No hay pedidos activos</h3>
+                    <p>Los pedidos aparecerán aquí cuando se creen desde el módulo de ventas</p>
+                    <a href="ventas.html" class="btn btn-primary">
+                        <i class="fas fa-plus"></i>
+                        Crear Nuevo Pedido
+                    </a>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal de Detalles del Pedido -->
+    <div id="orderModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Detalles del Pedido</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="orderModalBody">
+                <!-- Contenido del modal se carga dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/database.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/auth-guard.js"></script>
+    <script src="assets/js/pedidos.js"></script>
+    
+    <script>
+        function logout() {
+            authGuard.handleLogout();
+        }
+    </script>
+</body>
+</html>

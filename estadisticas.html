@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estadísticas - Crêpes & Kaffee</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/estadisticas.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 class="sidebar-title">MENÚ PRINCIPAL</h1>
+                <div class="sidebar-subtitle">Sistema POS</div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <div class="nav-item">
+                    <a href="dashboard.html" class="nav-link">
+                        <i class="fas fa-tachometer-alt"></i>
+                        Dashboard
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="ventas.html" class="nav-link">
+                        <i class="fas fa-cash-register"></i>
+                        Ventas
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="pedidos.html" class="nav-link">
+                        <i class="fas fa-clipboard-list"></i>
+                        Pedidos
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="mesas.html" class="nav-link">
+                        <i class="fas fa-chair"></i>
+                        Mesas
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="estadisticas.html" class="nav-link active">
+                        <i class="fas fa-chart-bar"></i>
+                        Estadísticas
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="configuracion.html" class="nav-link">
+                        <i class="fas fa-cog"></i>
+                        Configuración
+                    </a>
+                </div>
+            </nav>
+            
+            <a href="login.html" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                Cerrar Sesión
+            </a>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="page-header">
+                <h1 class="page-title">Estadísticas y Reportes</h1>
+                <p class="page-subtitle">Análisis de rendimiento del negocio</p>
+            </header>
+            
+            <div class="page-content">
+                <!-- Filtros de Período -->
+                <div class="period-selector mb-4">
+                    <div class="period-buttons">
+                        <button class="period-btn active" data-period="today">Hoy</button>
+                        <button class="period-btn" data-period="week">Esta Semana</button>
+                        <button class="period-btn" data-period="month">Este Mes</button>
+                        <button class="period-btn" data-period="year">Este Año</button>
+                    </div>
+                    
+                    <div class="date-range">
+                        <input type="date" id="startDate" class="form-input">
+                        <span>a</span>
+                        <input type="date" id="endDate" class="form-input">
+                        <button class="btn btn-primary" onclick="applyDateRange()">
+                            <i class="fas fa-search"></i>
+                            Aplicar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Estadísticas Generales -->
+                <div class="stats-overview mb-4">
+                    <div class="stat-box revenue">
+                        <div class="stat-icon">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Ingresos Totales</h3>
+                            <div class="stat-value" id="totalRevenue">$0.00</div>
+                            <div class="stat-change" id="revenueChange">+0%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-box orders">
+                        <div class="stat-icon">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Total Pedidos</h3>
+                            <div class="stat-value" id="totalOrders">0</div>
+                            <div class="stat-change" id="ordersChange">+0%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-box products">
+                        <div class="stat-icon">
+                            <i class="fas fa-box"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Productos Vendidos</h3>
+                            <div class="stat-value" id="totalProducts">0</div>
+                            <div class="stat-change" id="productsChange">+0%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-box average">
+                        <div class="stat-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Ticket Promedio</h3>
+                            <div class="stat-value" id="averageTicket">$0.00</div>
+                            <div class="stat-change" id="averageChange">+0%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráficos Principales -->
+                <div class="charts-section mb-4">
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <h3>Ventas por Período</h3>
+                            <div class="chart-controls">
+                                <select id="salesChartType" class="form-select">
+                                    <option value="daily">Por Día</option>
+                                    <option value="weekly">Por Semana</option>
+                                    <option value="monthly">Por Mes</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="salesTrendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráficos Secundarios -->
+                <div class="grid grid-2 mb-4">
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <h3>Productos Más Vendidos</h3>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="topProductsChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <h3>Ventas por Categoría</h3>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="categorySalesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Análisis Detallado -->
+                <div class="grid grid-2 mb-4">
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <h3>Horas Pico de Ventas</h3>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="hourlyAnalysisChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <h3>Ocupación de Mesas</h3>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="tableOccupancyChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reportes Detallados -->
+                <div class="reports-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Productos Más Populares</h3>
+                            <button class="btn btn-secondary" onclick="exportReport('products')">
+                                <i class="fas fa-download"></i>
+                                Exportar
+                            </button>
+                        </div>
+                        <div class="products-table">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th>Cantidad Vendida</th>
+                                        <th>Ingresos</th>
+                                        <th>% del Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="productsReportTable">
+                                    <!-- Se llena dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Resumen de Ventas por Día</h3>
+                            <button class="btn btn-secondary" onclick="exportReport('daily')">
+                                <i class="fas fa-download"></i>
+                                Exportar
+                            </button>
+                        </div>
+                        <div class="daily-summary">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Pedidos</th>
+                                        <th>Ingresos</th>
+                                        <th>Ticket Promedio</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dailySummaryTable">
+                                    <!-- Se llena dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/database.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/auth-guard.js"></script>
+    <script src="assets/js/estadisticas.js"></script>
+    
+    <script>
+        function logout() {
+            authGuard.handleLogout();
+        }
+    </script>
+</body>
+</html>
