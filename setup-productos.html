@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurar Productos</title>
+</head>
+<body>
+    <h1>Configurando productos para pruebas</h1>
+    <div id="results"></div>
+
+    <script src="assets/js/database.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script>
+        const results = document.getElementById('results');
+        
+        function log(message) {
+            results.innerHTML += '<p>' + message + '</p>';
+            console.log(message);
+        }
+
+        // Inicializar
+        const db = new Database();
+        const auth = new Auth();
+
+        // Login automático
+        const loginResult = auth.login('admin', 'admin123');
+        if (loginResult.success) {
+            log('✅ Login exitoso');
+            
+            // Productos de ejemplo
+            const productosEjemplo = [
+                { id: 1, nombre: 'Café Americano', precio: 3500, categoria: 'bebidas-calientes', active: true },
+                { id: 2, nombre: 'Café con Leche', precio: 4000, categoria: 'bebidas-calientes', active: true },
+                { id: 3, nombre: 'Cappuccino', precio: 4500, categoria: 'bebidas-calientes', active: true },
+                { id: 4, nombre: 'Crêpe de Nutella', precio: 8000, categoria: 'crepes-dulces', active: true },
+                { id: 5, nombre: 'Crêpe de Fresa', precio: 8500, categoria: 'crepes-dulces', active: true },
+                { id: 6, nombre: 'Crêpe de Jamón y Queso', precio: 9000, categoria: 'crepes-salados', active: true },
+                { id: 7, nombre: 'Crêpe de Pollo', precio: 9500, categoria: 'crepes-salados', active: true },
+                { id: 8, nombre: 'Jugo Natural de Naranja', precio: 4000, categoria: 'bebidas-frias', active: true },
+                { id: 9, nombre: 'Limonada', precio: 3500, categoria: 'bebidas-frias', active: true },
+                { id: 10, nombre: 'Brownie', precio: 5000, categoria: 'postres', active: true }
+            ];
+            
+            // Guardar productos
+            localStorage.setItem('pos_products', JSON.stringify(productosEjemplo));
+            log('✅ Productos configurados: ' + productosEjemplo.length);
+            
+            // Verificar productos existentes
+            const productos = db.getProducts();
+            log('📦 Productos cargados: ' + productos.length);
+            
+            productos.forEach(producto => {
+                log(`- ${producto.nombre}: $${producto.precio.toLocaleString()}`);
+            });
+            
+            setTimeout(() => {
+                log('🚀 Redirigiendo a ventas...');
+                window.location.href = 'ventas.html';
+            }, 3000);
+            
+        } else {
+            log('❌ Error de login');
+        }
+    </script>
+</body>
+</html>

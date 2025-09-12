@@ -1,12 +1,17 @@
 class SalesManager {
     constructor() {
+        // Validar dependencias
+        if (typeof Database === 'undefined') {
+            throw new Error('Database class is required but not found');
+        }
+        
         this.cart = [];
         this.currentOrder = {
             items: [],
             total: 0,
             customer: null,
             table: null,
-            type: 'dine-in' // 'dine-in', 'takeout', 'delivery'
+            type: 'dine-in'
         };
         this.db = new Database();
         this.init();
@@ -19,15 +24,53 @@ class SalesManager {
         this.updateCartDisplay();
         this.loadTables();
         this.initializeOrderType();
+        this.checkUrlParams();
         
-        // Refrescar mesas cuando la página regane el foco
         window.addEventListener('focus', () => {
             this.loadTables();
         });
     }
 
+    checkUrlParams() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const mesa = urlParams.get('mesa');
+        const editOrderId = urlParams.get('editOrder');
+        
+        if (mesa) {
+            this.currentOrder.type = 'dine-in';
+            this.currentOrder.table = mesa;
+            this.updateOrderTypeSelection();
+            this.selectTable(mesa);
+            this.showNotification(`Mesa ${mesa} seleccionada`, 'info');
+        }
+
+        if (editOrderId) {
+            this.loadOrderForEditing(editOrderId);
+        }
+    }
+
+    updateOrderTypeSelection() {
+        const typeButtons = document.querySelectorAll('.order-type-btn');
+        typeButtons.forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.type === this.currentOrder.type) {
+                btn.classList.add('active');
+            }
+        });
+        this.updateTableSelection();
+    }
+
+    selectTable(tableNumber) {
+        const tableButtons = document.querySelectorAll('.table-btn');
+        tableButtons.forEach(btn => {
+            btn.classList.remove('selected');
+            if (btn.dataset.table == tableNumber) {
+                btn.classList.add('selected');
+            }
+        });
+    }
+
     setupNotifications() {
-        // Crear contenedor de notificaciones si no existe
         if (!document.querySelector('.notifications-container')) {
             const container = document.createElement('div');
             container.className = 'notifications-container';
@@ -46,14 +89,12 @@ class SalesManager {
         
         container.appendChild(notification);
         
-        // Auto-remove después de 5 segundos
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.remove();
             }
         }, 5000);
         
-        // Evento para cerrar manualmente
         notification.querySelector('.close-notification').addEventListener('click', () => {
             notification.remove();
         });
@@ -63,8 +104,9 @@ class SalesManager {
         const products = this.db.getProducts().filter(p => p.active !== false);
         const categories = this.db.getCategories();
         
-        console.log('Productos cargados:', products);
-        console.log('Categorías encontradas:', categories);
+        // Comentado para producción
+        // console.log('Productos cargados:', products);
+        // console.log('Categorías encontradas:', categories);
         
         this.renderCategories(categories);
         this.renderProducts(products);
@@ -99,151 +141,94 @@ class SalesManager {
             console.error('Contenedor de productos no encontrado. ID esperado: productsList');
             return;
         }
-        
+
         if (products.length === 0) {
             productsContainer.innerHTML = `
                 <div class="no-products">
-                    <i class="fas fa-box-open" style="font-size: 48px; color: #ccc; margin-bottom: 16px;"></i>
                     <p>No hay productos disponibles</p>
-                    <p style="color: #666; font-size: 14px;">Ve a Configuración para agregar productos</p>
-                    <button onclick="window.location.href='configuracion.html'" style="margin-top: 16px; padding: 8px 16px; background: var(--primary-green); color: white; border: none; border-radius: 6px; cursor: pointer;">
-                        Ir a Configuración
-                    </button>
                 </div>
             `;
             return;
         }
+
+        productsContainer.innerHTML = products.map(product => 
+            this.createProductCard(product)
+        ).join('');
+    }
+
+    createProductCard(product) {
+        const price = product.precio || product.price || 0;
+        const name = product.nombre || product.name || 'Sin nombre';
+        const category = product.categoria || product.category || '';
         
-        productsContainer.innerHTML = products.map(product => `
-            <div class="product-card" data-category="${product.category}" data-product-id="${product.id}">
-                <div class="product-content">
-                    <h3 class="product-name">${product.name}</h3>
-                    <div class="product-price">$${product.price.toLocaleString()}</div>
+        return `
+            <div class="product-card" data-category="${category}" data-product-id="${product.id}">
+                <div class="product-info">
+                    <h4 class="product-name">${name}</h4>
+                    <div class="product-price">$${price.toLocaleString()}</div>
                 </div>
                 <button class="add-to-cart-btn" onclick="salesManager.addToCart(${product.id})">
-                    <i class="fas fa-plus"></i> Agregar
+                    <i class="fas fa-plus"></i>
+                    Agregar
                 </button>
             </div>
-        `).join('');
-    }
-
-    loadTables() {
-        const tableSelect = document.getElementById('selectedTable');
-        if (!tableSelect) return;
-        
-        // Actualizar select de mesas cada vez
-        const availableTables = this.db.getTables().filter(table => table.estado === 'libre');
-        const currentValue = tableSelect.value;
-        
-        tableSelect.innerHTML = `
-            <option value="">Seleccionar Mesa</option>
-            ${availableTables.map(table => 
-                `<option value="${table.id}">Mesa ${table.numero} (${table.capacidad} personas)</option>`
-            ).join('')}
         `;
-        
-        // Mantener selección actual si sigue siendo válida
-        if (currentValue && availableTables.find(t => t.id == currentValue)) {
-            tableSelect.value = currentValue;
-        }
-    }
-
-    initializeOrderType() {
-        const orderTypeInputs = document.querySelectorAll('input[name="order-type"]');
-        orderTypeInputs.forEach(input => {
-            input.addEventListener('change', (e) => {
-                this.currentOrder.type = e.target.value;
-                this.toggleTableSelection();
-            });
-        });
-        
-        this.toggleTableSelection();
-    }
-
-    toggleTableSelection() {
-        const tableContainer = document.querySelector('.table-selection');
-        if (!tableContainer) return;
-        
-        if (this.currentOrder.type === 'dine-in') {
-            tableContainer.style.display = 'block';
-        } else {
-            tableContainer.style.display = 'none';
-            this.currentOrder.table = null;
-            document.getElementById('table-select').value = '';
-        }
     }
 
     setupEventListeners() {
-        // Filtros de categoría
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('category-btn')) {
-                this.filterProducts(e.target.dataset.category);
-                document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.category-btn').forEach(btn => 
+                    btn.classList.remove('active'));
                 e.target.classList.add('active');
+                
+                const category = e.target.dataset.category;
+                this.filterByCategory(category);
             }
         });
 
-        // Búsqueda de productos
-        const searchInput = document.getElementById('productSearch');
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('order-type-btn')) {
+                document.querySelectorAll('.order-type-btn').forEach(btn => 
+                    btn.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                this.currentOrder.type = e.target.dataset.type;
+                this.updateTableSelection();
+                this.updateCartDisplay();
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('table-btn')) {
+                document.querySelectorAll('.table-btn').forEach(btn => 
+                    btn.classList.remove('selected'));
+                e.target.classList.add('selected');
+                
+                this.currentOrder.table = e.target.dataset.table;
+                this.updateCartDisplay();
+            }
+        });
+
+        const sendOrderBtn = document.getElementById('confirmOrderBtn');
+        if (sendOrderBtn) {
+            sendOrderBtn.addEventListener('click', () => this.sendOrder());
+        }
+
+        const clearCartBtn = document.getElementById('clearCartBtn');
+        if (clearCartBtn) {
+            clearCartBtn.addEventListener('click', () => this.clearCart());
+        }
+
+        const searchInput = document.getElementById('searchInput');
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
                 this.searchProducts(e.target.value);
             });
         }
-
-        // Selección de mesa
-        const tableSelect = document.getElementById('selectedTable');
-        if (tableSelect) {
-            tableSelect.addEventListener('change', (e) => {
-                this.currentOrder.table = e.target.value || null;
-                this.updateCartDisplay(); // Actualizar el estado del botón
-            });
-        }
-
-        // Tipo de orden
-        const orderTypeSelect = document.getElementById('orderType');
-        if (orderTypeSelect) {
-            orderTypeSelect.addEventListener('change', (e) => {
-                this.currentOrder.type = e.target.value;
-                this.updateCartDisplay(); // Actualizar el estado del botón
-            });
-        }
-
-        // Información del cliente
-        const customerInput = document.getElementById('customer-name');
-        if (customerInput) {
-            customerInput.addEventListener('change', (e) => {
-                this.currentOrder.customer = e.target.value;
-            });
-        }
-
-        // Botones de acción
-        const processOrderBtn = document.getElementById('process-order');
-        if (processOrderBtn) {
-            processOrderBtn.addEventListener('click', () => this.processOrder());
-        }
-
-        const clearCartBtn = document.getElementById('clearCart');
-        if (clearCartBtn) {
-            clearCartBtn.addEventListener('click', () => this.clearCart());
-        }
-
-        // Botón de enviar pedido
-        const sendOrderBtn = document.getElementById('sendOrder');
-        if (sendOrderBtn) {
-            sendOrderBtn.addEventListener('click', () => this.sendOrder());
-        }
-
-        // Métodos de pago
-        const paymentButtons = document.querySelectorAll('.payment-method-btn');
-        paymentButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.selectPaymentMethod(e.target.dataset.method);
-            });
-        });
     }
 
-    filterProducts(category) {
+    filterByCategory(category) {
         const products = document.querySelectorAll('.product-card');
         products.forEach(product => {
             if (category === 'all' || product.dataset.category === category) {
@@ -259,10 +244,9 @@ class SalesManager {
         const term = searchTerm.toLowerCase();
         
         products.forEach(product => {
-            const name = product.querySelector('h3').textContent.toLowerCase();
-            const description = product.querySelector('.product-description').textContent.toLowerCase();
+            const name = product.querySelector('.product-name').textContent.toLowerCase();
             
-            if (name.includes(term) || description.includes(term)) {
+            if (name.includes(term)) {
                 product.style.display = 'block';
             } else {
                 product.style.display = 'none';
@@ -271,7 +255,9 @@ class SalesManager {
     }
 
     addToCart(productId) {
-        const product = this.db.getProducts().find(p => p.id === productId);
+        const products = this.db.getProducts();
+        const product = products.find(p => p.id === productId);
+        
         if (!product) {
             this.showNotification('Producto no encontrado', 'error');
             return;
@@ -281,26 +267,23 @@ class SalesManager {
         
         if (existingItem) {
             existingItem.quantity += 1;
+            existingItem.subtotal = existingItem.quantity * (product.precio || product.price);
         } else {
             this.cart.push({
                 product: product,
                 quantity: 1,
-                subtotal: product.price
+                subtotal: product.precio || product.price
             });
         }
-        
+
         this.updateCartDisplay();
-        this.showNotification(`${product.name} agregado al carrito`, 'success');
+        this.showNotification(`${product.nombre || product.name} agregado al carrito`, 'success');
     }
 
     removeFromCart(productId) {
-        const index = this.cart.findIndex(item => item.product.id === productId);
-        if (index > -1) {
-            const removedItem = this.cart[index];
-            this.cart.splice(index, 1);
-            this.updateCartDisplay();
-            this.showNotification(`${removedItem.product.name} eliminado del carrito`, 'info');
-        }
+        this.cart = this.cart.filter(item => item.product.id !== productId);
+        this.updateCartDisplay();
+        this.showNotification('Producto eliminado del carrito', 'info');
     }
 
     updateQuantity(productId, newQuantity) {
@@ -310,7 +293,7 @@ class SalesManager {
                 this.removeFromCart(productId);
             } else {
                 item.quantity = newQuantity;
-                item.subtotal = item.product.price * newQuantity;
+                item.subtotal = item.quantity * (item.product.precio || item.product.price);
                 this.updateCartDisplay();
             }
         }
@@ -318,12 +301,20 @@ class SalesManager {
 
     updateCartDisplay() {
         const cartContainer = document.getElementById('cartItems');
-        const subtotalElement = document.getElementById('subtotal');
-        const cartTotalElement = document.getElementById('cartTotal');
-        
-        if (!cartContainer) {
-            console.error('Contenedor del carrito no encontrado. ID esperado: cartItems');
-            return;
+        const cartTotal = document.getElementById('totalAmount');
+        const cartCount = document.getElementById('cartCount');
+        const sendOrderBtn = document.getElementById('confirmOrderBtn');
+
+        if (!cartContainer) return;
+
+        this.currentOrder.total = this.cart.reduce((total, item) => total + item.subtotal, 0);
+
+        if (cartCount) {
+            cartCount.textContent = this.cart.reduce((count, item) => count + item.quantity, 0);
+        }
+
+        if (cartTotal) {
+            cartTotal.textContent = `$${this.currentOrder.total.toLocaleString()}`;
         }
 
         if (this.cart.length === 0) {
@@ -331,47 +322,86 @@ class SalesManager {
                 <div class="empty-cart">
                     <i class="fas fa-shopping-cart"></i>
                     <p>El carrito está vacío</p>
-                    <span>Agrega productos para comenzar</span>
                 </div>
             `;
         } else {
             cartContainer.innerHTML = this.cart.map(item => `
-                <div class="cart-item">
-                    <div class="cart-item-info">
-                        <h4 class="cart-item-name">${item.product.name}</h4>
-                        <p class="cart-item-price">$${item.product.price.toLocaleString()}</p>
+                <div class="cart-item" data-product-id="${item.product.id}">
+                    <div class="item-info">
+                        <h5>${item.product.nombre || item.product.name}</h5>
+                        <p class="item-price">$${(item.product.precio || item.product.price).toLocaleString()}</p>
                     </div>
-                    <div class="cart-item-controls">
-                        <button class="quantity-btn" onclick="salesManager.updateQuantity(${item.product.id}, ${item.quantity - 1})">
+                    <div class="item-controls">
+                        <button class="quantity-btn minus" onclick="salesManager.updateQuantity(${item.product.id}, ${item.quantity - 1})">
                             <i class="fas fa-minus"></i>
                         </button>
                         <span class="quantity">${item.quantity}</span>
-                        <button class="quantity-btn" onclick="salesManager.updateQuantity(${item.product.id}, ${item.quantity + 1})">
+                        <button class="quantity-btn plus" onclick="salesManager.updateQuantity(${item.product.id}, ${item.quantity + 1})">
                             <i class="fas fa-plus"></i>
                         </button>
-                        <button class="remove-item-btn" onclick="salesManager.removeFromCart(${item.product.id})" title="Eliminar producto">
-                            <i class="fas fa-trash"></i>
-                        </button>
                     </div>
-                    <div class="cart-item-subtotal">$${item.subtotal.toLocaleString()}</div>
+                    <div class="item-subtotal">$${item.subtotal.toLocaleString()}</div>
+                    <button class="remove-item" onclick="salesManager.removeFromCart(${item.product.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </div>
             `).join('');
         }
 
-        const subtotal = this.cart.reduce((sum, item) => sum + item.subtotal, 0);
-        const total = subtotal; // Sin impuestos
-        
-        if (subtotalElement) subtotalElement.textContent = `$${subtotal.toLocaleString()}`;
-        if (cartTotalElement) cartTotalElement.textContent = `$${total.toLocaleString()}`;
-        
-        this.currentOrder.items = this.cart;
-        this.currentOrder.total = total;
-
-        // Habilitar/deshabilitar botón de enviar pedido
-        const sendOrderBtn = document.getElementById('sendOrder');
         if (sendOrderBtn) {
             sendOrderBtn.disabled = this.cart.length === 0;
         }
+    }
+
+    initializeOrderType() {
+        const defaultTypeBtn = document.querySelector('.order-type-btn[data-type="dine-in"]');
+        if (defaultTypeBtn) {
+            defaultTypeBtn.classList.add('active');
+        }
+        this.updateTableSelection();
+    }
+
+    updateTableSelection() {
+        const tablesContainer = document.getElementById('tableSelection');
+        if (!tablesContainer) return;
+
+        if (this.currentOrder.type === 'dine-in') {
+            tablesContainer.style.display = 'block';
+            this.loadTables();
+        } else {
+            tablesContainer.style.display = 'none';
+            this.currentOrder.table = null;
+        }
+    }
+
+    loadTables() {
+        const tablesContainer = document.getElementById('tablesGrid');
+        if (!tablesContainer) return;
+
+        const tables = this.db.getTables();
+        const availableTables = tables.filter(table => table.estado === 'libre');
+
+        if (availableTables.length === 0) {
+            tablesContainer.innerHTML = `
+                <div class="no-tables">
+                    <p>No hay mesas disponibles</p>
+                    <button class="btn btn-secondary" onclick="window.location.href='mesas.html'">
+                        <i class="fas fa-plus"></i>
+                        Ir a Mesas
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        tablesContainer.innerHTML = availableTables.map(table => `
+            <button class="table-btn ${this.currentOrder.table == table.numero ? 'selected' : ''}" 
+                    data-table="${table.numero}">
+                <i class="fas fa-chair"></i>
+                <span class="table-number">Mesa ${table.numero}</span>
+                ${table.capacidad ? `<small class="table-capacity">${table.capacidad} personas</small>` : ''}
+            </button>
+        `).join('');
     }
 
     clearCart() {
@@ -400,43 +430,51 @@ class SalesManager {
                     productName: item.product.nombre || item.product.name,
                     quantity: item.quantity,
                     unitPrice: item.product.precio || item.product.price,
-                    subtotal: item.subtotal
+                    subtotal: item.subtotal,
+                    estado: 'pendiente'
                 })),
                 total: this.currentOrder.total,
                 mesa: this.currentOrder.table,
-                tipo: this.currentOrder.type,
+                tipo: this.getOrderTypeSpanish(this.currentOrder.type),
                 estado: 'pendiente',
                 timestamp: new Date().toISOString(),
                 fecha: new Date().toLocaleDateString('es-ES'),
-                hora: new Date().toLocaleTimeString('es-ES')
+                hora: new Date().toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'})
             };
 
-            // Guardar pedido en la base de datos
+            // Guardar el pedido
             this.db.saveOrder(order);
 
-            // Si es para mesa, actualizar estado de la mesa
-            if (order.mesa && order.tipo === 'mesa') {
+            // Actualizar mesa si es dine-in
+            if (order.mesa && this.currentOrder.type === 'dine-in') {
                 const tables = this.db.getTables();
                 const table = tables.find(t => t.numero == order.mesa);
                 if (table) {
                     table.estado = 'ocupada';
+                    table.pedidoId = order.id;
+                    table.ultimaActividad = new Date().toISOString();
                     this.db.updateTable(table.id, table);
-                    this.loadTables(); // Recargar lista de mesas
+                    this.loadTables(); // Recargar mesas disponibles
                 }
             }
 
-            // Limpiar carrito y formulario
             this.clearOrderForm();
-
             this.showNotification(`Pedido #${order.id} enviado exitosamente`, 'success');
-
-            // Mostrar detalles del pedido
             this.showOrderDetailsModal(order);
 
         } catch (error) {
             console.error('Error al enviar el pedido:', error);
-            this.showNotification('Error al enviar el pedido', 'error');
+            this.showNotification('Error al enviar el pedido. Intenta nuevamente.', 'error');
         }
+    }
+
+    getOrderTypeSpanish(type) {
+        const types = {
+            'dine-in': 'mesa',
+            'takeout': 'llevar',
+            'delivery': 'domicilio'
+        };
+        return types[type] || type;
     }
 
     validateOrderForSending() {
@@ -445,12 +483,275 @@ class SalesManager {
             return false;
         }
 
-        if (this.currentOrder.type === 'mesa' && !this.currentOrder.table) {
+        if (this.currentOrder.type === 'dine-in' && !this.currentOrder.table) {
             this.showNotification('Selecciona una mesa para pedidos en local', 'error');
             return false;
         }
 
         return true;
+    }
+
+    clearOrderForm() {
+        this.cart = [];
+        this.currentOrder.table = null;
+        
+        document.querySelectorAll('.table-btn').forEach(btn => 
+            btn.classList.remove('selected'));
+        
+        document.querySelectorAll('.order-type-btn').forEach(btn => 
+            btn.classList.remove('active'));
+        const defaultTypeBtn = document.querySelector('.order-type-btn[data-type="dine-in"]');
+        if (defaultTypeBtn) {
+            defaultTypeBtn.classList.add('active');
+        }
+        
+        this.currentOrder.type = 'dine-in';
+        this.updateCartDisplay();
+        this.updateTableSelection();
+        
+        // Limpiar modo de edición
+        this.removeEditingMode();
+    }
+
+    loadOrderForEditing(orderId) {
+        try {
+            // Convertir orderId a número para comparación consistente
+            const orderIdToLoad = parseInt(orderId);
+            
+            const orders = this.db.getOrders();
+            const order = orders.find(o => parseInt(o.id) === orderIdToLoad);
+            
+            if (!order) {
+                this.showNotification('Pedido no encontrado para editar', 'error');
+                console.error('Pedido no encontrado con ID:', orderIdToLoad);
+                return;
+            }
+
+            console.log('Cargando pedido para edición:', order);
+
+            // Limpiar carrito actual
+            this.cart = [];
+            
+            // Cargar items del pedido al carrito con cantidades correctas
+            order.items.forEach(item => {
+                const products = this.db.getProducts();
+                const product = products.find(p => p.id === item.productId);
+                
+                if (product) {
+                    // Agregar al carrito con la cantidad correcta directamente
+                    this.cart.push({
+                        product: product,
+                        quantity: item.quantity,
+                        subtotal: item.quantity * (product.precio || product.price)
+                    });
+                } else {
+                    console.warn('Producto no encontrado:', item.productId, item.productName);
+                }
+            });
+
+            // Consolidar items duplicados en el carrito
+            this.consolidateCart();
+
+            // Configurar mesa y tipo de pedido
+            this.currentOrder.table = order.mesa;
+            this.currentOrder.type = 'dine-in';
+            
+            // Actualizar interfaz
+            this.updateOrderTypeSelection();
+            this.selectTable(order.mesa);
+            this.updateCartDisplay();
+            
+            // Cambiar el texto del botón para indicar que es una edición
+            const confirmBtn = document.getElementById('confirmOrderBtn');
+            if (confirmBtn) {
+                confirmBtn.innerHTML = '<i class="fas fa-save"></i> Actualizar Pedido';
+                confirmBtn.onclick = () => this.updateOrder(orderIdToLoad);
+            }
+            
+            // Mostrar información de la edición en la interfaz
+            this.showEditingMode(order);
+            
+            this.showNotification(`Pedido #${orderIdToLoad} cargado para edición - Mesa ${order.mesa}`, 'info');
+            
+        } catch (error) {
+            console.error('Error al cargar pedido para edición:', error);
+            this.showNotification('Error al cargar el pedido', 'error');
+        }
+    }
+
+    consolidateCart() {
+        const consolidated = [];
+        
+        this.cart.forEach(item => {
+            const existing = consolidated.find(ci => ci.product.id === item.product.id);
+            if (existing) {
+                existing.quantity += item.quantity;
+                existing.subtotal = existing.quantity * (existing.product.precio || existing.product.price);
+            } else {
+                consolidated.push({ ...item });
+            }
+        });
+        
+        this.cart = consolidated;
+    }
+
+    updateOrder(originalOrderId) {
+        if (!this.validateOrderForSending()) {
+            return;
+        }
+
+        try {
+            // Convertir originalOrderId a número para comparación consistente
+            const orderIdToUpdate = parseInt(originalOrderId);
+            
+            // Obtener la orden original para mantener datos importantes
+            const orders = this.db.getOrders();
+            const originalOrder = orders.find(o => parseInt(o.id) === orderIdToUpdate);
+            
+            if (!originalOrder) {
+                this.showNotification('Pedido no encontrado para actualizar', 'error');
+                console.error('Pedido no encontrado con ID:', orderIdToUpdate);
+                return;
+            }
+
+            console.log('Actualizando pedido:', originalOrder);
+
+            // Crear orden actualizada manteniendo datos importantes del original
+            const updatedOrder = {
+                id: orderIdToUpdate, // Mantener el ID original como número
+                items: this.cart.map(item => ({
+                    productId: item.product.id,
+                    productName: item.product.nombre || item.product.name,
+                    quantity: item.quantity,
+                    unitPrice: item.product.precio || item.product.price,
+                    subtotal: item.subtotal,
+                    estado: 'pendiente' // Resetear estado a pendiente para nuevos items
+                })),
+                total: this.currentOrder.total,
+                mesa: this.currentOrder.table,
+                tipo: this.getOrderTypeSpanish(this.currentOrder.type),
+                estado: 'pendiente', // Resetear estado del pedido para repreparación
+                timestamp: originalOrder.timestamp, // Mantener timestamp original
+                fecha: originalOrder.fecha, // Mantener fecha original
+                hora: originalOrder.hora, // Mantener hora original
+                fechaActualizacion: new Date().toISOString(), // Nueva fecha de actualización
+                horaActualizacion: new Date().toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'})
+            };
+
+            // Encontrar el índice del pedido a actualizar
+            const orderIndex = orders.findIndex(o => parseInt(o.id) === orderIdToUpdate);
+            
+            if (orderIndex !== -1) {
+                // Reemplazar completamente el pedido en el array
+                orders[orderIndex] = updatedOrder;
+                
+                // Guardar directamente en localStorage para asegurar persistencia
+                localStorage.setItem('orders', JSON.stringify(orders));
+                
+                console.log('Pedido actualizado exitosamente:', updatedOrder);
+                console.log('Total de pedidos después de actualización:', orders.length);
+                
+                // Actualizar la mesa si cambió
+                if (originalOrder.mesa !== updatedOrder.mesa) {
+                    this.updateTableAssignment(originalOrder.mesa, updatedOrder.mesa, orderIdToUpdate);
+                }
+                
+                this.clearOrderForm();
+                
+                // Restaurar botón original
+                const confirmBtn = document.getElementById('confirmOrderBtn');
+                if (confirmBtn) {
+                    confirmBtn.innerHTML = '<i class="fas fa-check"></i> Confirmar Orden';
+                    confirmBtn.onclick = () => this.sendOrder();
+                }
+                
+                this.showNotification(`Pedido #${orderIdToUpdate} actualizado exitosamente`, 'success');
+                
+                // Redirigir de vuelta a mesas después de un momento con parámetro de actualización
+                setTimeout(() => {
+                    window.location.href = 'mesas.html?updated=true';
+                }, 2000);
+                
+            } else {
+                throw new Error(`No se pudo encontrar el pedido con ID ${orderIdToUpdate} para actualizar`);
+            }
+
+        } catch (error) {
+            console.error('Error al actualizar el pedido:', error);
+            this.showNotification('Error al actualizar el pedido. Intenta nuevamente.', 'error');
+        }
+    }
+
+    updateTableAssignment(oldTableNumber, newTableNumber, orderId) {
+        try {
+            // Liberar mesa anterior si cambió
+            if (oldTableNumber && oldTableNumber !== newTableNumber) {
+                const tables = this.db.getTables();
+                const oldTable = tables.find(t => t.numero == oldTableNumber);
+                if (oldTable && oldTable.pedidoId == orderId) {
+                    oldTable.estado = 'libre';
+                    oldTable.pedidoId = null;
+                    oldTable.ultimaActividad = new Date().toISOString();
+                    this.db.updateTable(oldTable.id, oldTable);
+                }
+            }
+
+            // Asignar nueva mesa
+            if (newTableNumber) {
+                const tables = this.db.getTables();
+                const newTable = tables.find(t => t.numero == newTableNumber);
+                if (newTable) {
+                    newTable.estado = 'ocupada';
+                    newTable.pedidoId = orderId;
+                    newTable.ultimaActividad = new Date().toISOString();
+                    this.db.updateTable(newTable.id, newTable);
+                }
+            }
+        } catch (error) {
+            console.error('Error al actualizar asignación de mesa:', error);
+        }
+    }
+
+    showEditingMode(order) {
+        // Crear o actualizar banner de edición
+        let editBanner = document.getElementById('edit-mode-banner');
+        if (!editBanner) {
+            editBanner = document.createElement('div');
+            editBanner.id = 'edit-mode-banner';
+            editBanner.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                background: #ff9800;
+                color: white;
+                padding: 10px;
+                text-align: center;
+                font-weight: bold;
+                z-index: 1001;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            `;
+            document.body.appendChild(editBanner);
+            
+            // Ajustar el padding del body para el banner
+            document.body.style.paddingTop = '50px';
+        }
+        
+        editBanner.innerHTML = `
+            <i class="fas fa-edit"></i>
+            EDITANDO PEDIDO #${order.id} - Mesa ${order.mesa} 
+            <small style="margin-left: 20px;">
+                Original: ${order.hora} | Total anterior: $${order.total.toLocaleString()}
+            </small>
+        `;
+    }
+
+    removeEditingMode() {
+        const editBanner = document.getElementById('edit-mode-banner');
+        if (editBanner) {
+            editBanner.remove();
+            document.body.style.paddingTop = '0';
+        }
     }
 
     showOrderDetailsModal(order) {
@@ -521,7 +822,7 @@ class SalesManager {
                             <p style="margin: 8px 0;"><strong>Hora:</strong> ${order.hora}</p>
                             <p style="margin: 8px 0;"><strong>Tipo:</strong> ${this.getOrderTypeLabel(order.tipo)}</p>
                             ${order.mesa ? `<p style="margin: 8px 0;"><strong>Mesa:</strong> ${order.mesa}</p>` : ''}
-                            <p style="margin: 8px 0;"><strong>Total:</strong> ${this.db.formatCurrency(order.total)}</p>
+                            <p style="margin: 8px 0;"><strong>Total:</strong> $${order.total.toLocaleString()}</p>
                         </div>
                         
                         <div style="margin-bottom: 20px;">
@@ -539,59 +840,84 @@ class SalesManager {
                                         padding: 8px 0;
                                         border-bottom: 1px solid #e2e8f0;
                                     ">
-                                        <span>${item.quantity}x ${item.productName}</span>
-                                        <span style="font-weight: 600;">${this.db.formatCurrency(item.subtotal)}</span>
+                                        <div>
+                                            <span style="font-weight: 500;">${item.productName}</span>
+                                            <span style="color: #666; margin-left: 8px;">x${item.quantity}</span>
+                                        </div>
+                                        <span style="font-weight: bold;">$${item.subtotal.toLocaleString()}</span>
                                     </div>
                                 `).join('')}
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer" style="
+                
+                <div class="modal-actions" style="
                     display: flex;
-                    gap: 12px;
-                    justify-content: flex-end;
-                    margin-top: 24px;
+                    gap: 10px;
+                    justify-content: space-between;
+                    margin-top: 20px;
                 ">
-                    <button class="btn-secondary" style="
-                        padding: 12px 20px;
-                        border: 2px solid #e2e8f0;
+                    <div style="display: flex; gap: 10px;">
+                        <button class="goto-pedidos" style="
+                            padding: 10px 20px;
+                            border: 1px solid #2196f3;
+                            background: #2196f3;
+                            color: white;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            font-weight: 500;
+                        ">
+                            <i class="fas fa-clipboard-list"></i> Ver en Pedidos
+                        </button>
+                        ${order.mesa ? `
+                            <button class="goto-mesas" style="
+                                padding: 10px 20px;
+                                border: 1px solid #4caf50;
+                                background: #4caf50;
+                                color: white;
+                                border-radius: 8px;
+                                cursor: pointer;
+                                font-weight: 500;
+                            ">
+                                <i class="fas fa-chair"></i> Ver Mesa
+                            </button>
+                        ` : ''}
+                    </div>
+                    <button class="close-action" style="
+                        padding: 10px 20px;
+                        border: 1px solid #e2e8f0;
                         background: white;
-                        color: #64748b;
                         border-radius: 8px;
                         cursor: pointer;
-                        font-weight: 600;
                     ">Cerrar</button>
-                    <button class="btn-view-orders" style="
-                        padding: 12px 20px;
-                        border: none;
-                        background: #6b9b7c;
-                        color: white;
-                        border-radius: 8px;
-                        cursor: pointer;
-                        font-weight: 600;
-                    ">Ver Pedidos</button>
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(modal);
-        
-        // Event listeners para el modal
+
         modal.querySelector('.close-modal').addEventListener('click', () => {
             modal.remove();
         });
-        
-        modal.querySelector('.btn-secondary').addEventListener('click', () => {
+
+        modal.querySelector('.close-action').addEventListener('click', () => {
             modal.remove();
         });
-        
-        modal.querySelector('.btn-view-orders').addEventListener('click', () => {
+
+        modal.querySelector('.goto-pedidos').addEventListener('click', () => {
             modal.remove();
             window.location.href = 'pedidos.html';
         });
-        
-        // Cerrar al hacer clic fuera
+
+        const gotoMesasBtn = modal.querySelector('.goto-mesas');
+        if (gotoMesasBtn) {
+            gotoMesasBtn.addEventListener('click', () => {
+                modal.remove();
+                window.location.href = 'mesas.html';
+            });
+        }
+
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
                 modal.remove();
@@ -599,281 +925,137 @@ class SalesManager {
         });
     }
 
-    getOrderTypeLabel(type) {
+    getOrderTypeLabel(tipo) {
         const labels = {
-            'mesa': 'Para Mesa',
-            'llevar': 'Para Llevar'
+            'mesa': 'Para comer aquí',
+            'llevar': 'Para llevar',
+            'domicilio': 'Domicilio',
+            'dine-in': 'Para comer aquí',
+            'takeout': 'Para llevar',
+            'delivery': 'Domicilio'
         };
-        return labels[type] || type;
-    }
-
-    selectPaymentMethod(method) {
-        document.querySelectorAll('.payment-method-btn').forEach(btn => {
-            btn.classList.remove('selected');
-        });
-        
-        document.querySelector(`[data-method="${method}"]`).classList.add('selected');
-        this.currentOrder.paymentMethod = method;
-    }
-
-    validateOrder() {
-        if (this.cart.length === 0) {
-            this.showNotification('El carrito está vacío', 'error');
-            return false;
-        }
-
-        if (this.currentOrder.type === 'dine-in' && !this.currentOrder.table) {
-            this.showNotification('Selecciona una mesa para pedidos en local', 'error');
-            return false;
-        }
-
-        if (!this.currentOrder.paymentMethod) {
-            this.showNotification('Selecciona un método de pago', 'error');
-            return false;
-        }
-
-        return true;
-    }
-
-    processOrder() {
-        if (!this.validateOrder()) {
-            return;
-        }
-
-        try {
-            const order = {
-                id: Date.now(),
-                items: this.cart.map(item => ({
-                    productId: item.product.id,
-                    productName: item.product.name,
-                    quantity: item.quantity,
-                    unitPrice: item.product.price,
-                    subtotal: item.subtotal
-                })),
-                total: this.currentOrder.total,
-                customer: this.currentOrder.customer || 'Cliente sin nombre',
-                table: this.currentOrder.table,
-                type: this.currentOrder.type,
-                paymentMethod: this.currentOrder.paymentMethod,
-                status: 'pending',
-                timestamp: new Date().toISOString(),
-                date: new Date().toLocaleDateString(),
-                time: new Date().toLocaleTimeString()
-            };
-
-            // Guardar orden en la base de datos
-            this.db.addOrder(order);
-
-            // Si es una mesa, actualizarla como ocupada
-            if (order.table) {
-                this.db.updateTableStatus(order.table, 'occupied');
-                this.loadTables(); // Recargar lista de mesas
-            }
-
-            // Actualizar inventario (si se implementa)
-            this.updateInventory(order.items);
-
-            // Limpiar carrito y formulario
-            this.clearOrderForm();
-
-            this.showNotification(`Orden #${order.id} procesada exitosamente`, 'success');
-
-            // Opcionalmente, abrir el módulo de pedidos
-            this.showOrderDetails(order);
-
-        } catch (error) {
-            console.error('Error al procesar la orden:', error);
-            this.showNotification('Error al procesar la orden', 'error');
-        }
-    }
-
-    updateInventory(items) {
-        // Implementar actualización de inventario si es necesario
-        items.forEach(item => {
-            const product = this.db.getProducts().find(p => p.id === item.productId);
-            if (product && product.stock !== undefined) {
-                product.stock -= item.quantity;
-                this.db.updateProduct(product);
-            }
-        });
-    }
-
-    clearOrderForm() {
-        this.cart = [];
-        this.currentOrder = {
-            items: [],
-            total: 0,
-            customer: null,
-            table: null,
-            type: 'dine-in'
-        };
-
-        this.updateCartDisplay();
-        
-        // Limpiar formulario
-        const customerInput = document.getElementById('customer-name');
-        if (customerInput) customerInput.value = '';
-        
-        const tableSelect = document.getElementById('table-select');
-        if (tableSelect) tableSelect.value = '';
-        
-        // Resetear tipo de orden
-        const orderTypeInputs = document.querySelectorAll('input[name="order-type"]');
-        orderTypeInputs.forEach(input => {
-            if (input.value === 'dine-in') {
-                input.checked = true;
-            } else {
-                input.checked = false;
-            }
-        });
-        
-        // Limpiar método de pago
-        document.querySelectorAll('.payment-method-btn').forEach(btn => {
-            btn.classList.remove('selected');
-        });
-        
-        this.currentOrder.type = 'dine-in';
-        this.currentOrder.paymentMethod = null;
-        this.toggleTableSelection();
-    }
-
-    showOrderDetails(order) {
-        const modal = document.createElement('div');
-        modal.className = 'order-modal';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>Orden Procesada</h2>
-                    <button class="close-modal">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="order-summary">
-                        <h3>Orden #${order.id}</h3>
-                        <p><strong>Cliente:</strong> ${order.customer}</p>
-                        <p><strong>Tipo:</strong> ${this.getOrderTypeLabel(order.type)}</p>
-                        ${order.table ? `<p><strong>Mesa:</strong> ${order.table}</p>` : ''}
-                        <p><strong>Pago:</strong> ${this.getPaymentMethodLabel(order.paymentMethod)}</p>
-                        <p><strong>Total:</strong> $${order.total.toFixed(2)}</p>
-                        
-                        <h4>Productos:</h4>
-                        <ul class="order-items">
-                            ${order.items.map(item => `
-                                <li>${item.quantity}x ${item.productName} - $${item.subtotal.toFixed(2)}</li>
-                            `).join('')}
-                        </ul>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn-secondary" onclick="this.parentElement.parentElement.parentElement.remove()">Cerrar</button>
-                    <button class="btn-primary" onclick="salesManager.printReceipt(${order.id})">Imprimir Recibo</button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        // Cerrar modal
-        modal.querySelector('.close-modal').addEventListener('click', () => {
-            modal.remove();
-        });
-        
-        // Cerrar al hacer clic fuera
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.remove();
-            }
-        });
-    }
-
-    getPaymentMethodLabel(method) {
-        const labels = {
-            'cash': 'Efectivo',
-            'card': 'Tarjeta',
-            'transfer': 'Transferencia'
-        };
-        return labels[method] || method;
-    }
-
-    printReceipt(orderId) {
-        const order = this.db.getOrders().find(o => o.id === orderId);
-        if (!order) {
-            this.showNotification('Orden no encontrada', 'error');
-            return;
-        }
-
-        const receiptWindow = window.open('', '_blank');
-        receiptWindow.document.write(`
-            <html>
-                <head>
-                    <title>Recibo - Orden #${order.id}</title>
-                    <style>
-                        body { font-family: monospace; font-size: 12px; margin: 20px; }
-                        .header { text-align: center; margin-bottom: 20px; }
-                        .order-info { margin-bottom: 15px; }
-                        .items { margin-bottom: 15px; }
-                        .total { font-weight: bold; border-top: 1px solid #000; padding-top: 10px; }
-                        .footer { text-align: center; margin-top: 20px; font-size: 10px; }
-                    </style>
-                </head>
-                <body>
-                    <div class="header">
-                        <h1>Crêpes & Kaffee</h1>
-                        <p>Recibo de Venta</p>
-                    </div>
-                    
-                    <div class="order-info">
-                        <p><strong>Orden #:</strong> ${order.id}</p>
-                        <p><strong>Fecha:</strong> ${order.date}</p>
-                        <p><strong>Hora:</strong> ${order.time}</p>
-                        <p><strong>Cliente:</strong> ${order.customer}</p>
-                        <p><strong>Tipo:</strong> ${this.getOrderTypeLabel(order.type)}</p>
-                        ${order.table ? `<p><strong>Mesa:</strong> ${order.table}</p>` : ''}
-                        <p><strong>Pago:</strong> ${this.getPaymentMethodLabel(order.paymentMethod)}</p>
-                    </div>
-                    
-                    <div class="items">
-                        <p><strong>Productos:</strong></p>
-                        ${order.items.map(item => `
-                            <p>${item.quantity}x ${item.productName} - $${item.subtotal.toFixed(2)}</p>
-                        `).join('')}
-                    </div>
-                    
-                    <div class="total">
-                        <p><strong>Total: $${order.total.toFixed(2)}</strong></p>
-                    </div>
-                    
-                    <div class="footer">
-                        <p>¡Gracias por su compra!</p>
-                        <p>Que disfrute su comida</p>
-                    </div>
-                </body>
-            </html>
-        `);
-        
-        receiptWindow.document.close();
-        receiptWindow.print();
-    }
-
-    // Método para obtener estadísticas de ventas
-    getSalesStats() {
-        const orders = this.db.getOrders();
-        const today = new Date().toLocaleDateString();
-        
-        const todayOrders = orders.filter(order => order.date === today);
-        const todayRevenue = todayOrders.reduce((sum, order) => sum + order.total, 0);
-        
-        return {
-            totalOrders: orders.length,
-            todayOrders: todayOrders.length,
-            totalRevenue: orders.reduce((sum, order) => sum + order.total, 0),
-            todayRevenue: todayRevenue,
-            averageOrderValue: orders.length > 0 ? orders.reduce((sum, order) => sum + order.total, 0) / orders.length : 0
-        };
+        return labels[tipo] || tipo;
     }
 }
 
-// Inicializar el administrador de ventas cuando la página cargue
-let salesManager;
 document.addEventListener('DOMContentLoaded', () => {
-    salesManager = new SalesManager();
+    window.salesManager = new SalesManager();
 });
+
+function refreshData() {
+    if (window.salesManager) {
+        window.salesManager.loadProducts();
+        window.salesManager.loadTables();
+    }
+}
+
+const style = document.createElement('style');
+style.textContent = `
+    .notifications-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 3000;
+    }
+
+    .notification {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        min-width: 250px;
+        animation: slideInRight 0.3s ease-out;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .notification.success { background-color: #4caf50; }
+    .notification.error { background-color: #f44336; }
+    .notification.warning { background-color: #ff9800; }
+    .notification.info { background-color: #2196f3; }
+
+    .close-notification {
+        background: none;
+        border: none;
+        color: white;
+        cursor: pointer;
+        font-size: 16px;
+        margin-left: 10px;
+    }
+
+    @keyframes slideInRight {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+
+    .product-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .product-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
+    .add-to-cart-btn { transition: background-color 0.2s ease; }
+    .add-to-cart-btn:hover { background-color: #1976d2; }
+    .category-btn { transition: all 0.2s ease; }
+    .category-btn:hover { background-color: #e3f2fd; }
+    .category-btn.active { background-color: #2196f3; color: white; }
+    .order-type-btn { transition: all 0.2s ease; }
+    .order-type-btn:hover { background-color: #e8f5e8; }
+    .order-type-btn.active { background-color: #4caf50; color: white; }
+    .table-btn { transition: all 0.2s ease; }
+    .table-btn:hover { background-color: #fff3e0; }
+    .table-btn.selected { background-color: #ff9800; color: white; }
+    .cart-item { transition: background-color 0.2s ease; }
+    .cart-item:hover { background-color: #f8f9fa; }
+    .quantity-btn { transition: background-color 0.2s ease; }
+    .quantity-btn:hover { background-color: #e0e0e0; }
+    .remove-item { transition: color 0.2s ease; }
+    .remove-item:hover { color: #f44336; }
+
+    .empty-cart {
+        text-align: center;
+        padding: 40px 20px;
+        color: #666;
+    }
+
+    .empty-cart i {
+        font-size: 48px;
+        margin-bottom: 16px;
+        color: #ddd;
+    }
+
+    .no-products, .no-tables {
+        text-align: center;
+        padding: 40px 20px;
+        color: #666;
+    }
+
+    .placeholder-image {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 150px;
+        background-color: #f5f5f5;
+        color: #999;
+        font-size: 32px;
+    }
+`;
+
+document.head.appendChild(style);
+
+// Inicializar el gestor cuando se carga la página
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        window.salesManager = new SalesManager();
+    } catch (error) {
+        console.error('Error al inicializar SalesManager:', error);
+        alert('Error al cargar el sistema de ventas. Verifique que todos los archivos estén cargados correctamente.');
+    }
+});
+
+// Función auxiliar para refrescar datos
+function refreshData() {
+    if (window.salesManager) {
+        window.salesManager.loadProducts();
+        window.salesManager.loadTables();
+    }
+}

@@ -1,11 +1,6 @@
 // Dashboard JavaScript - Crêpes & Kaffee
 // Sistema POS - Panel de Control Principal
 
-// Verificar autenticación
-if (localStorage.getItem('userLoggedIn') !== 'true') {
-    window.location.href = 'login.html';
-}
-
 // Variables globales
 let dashboardData = {
     sales: [],
@@ -382,7 +377,7 @@ function logout() {
     if (typeof authGuard !== 'undefined') {
         authGuard.handleLogout();
     } else {
-        localStorage.removeItem('userLoggedIn');
+        // Fallback en caso de que authGuard no esté disponible
         window.location.href = 'login.html';
     }
 }

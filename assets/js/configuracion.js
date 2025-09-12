@@ -1174,20 +1174,26 @@ function executeDataClean() {
         return;
     }
     
+    const confirmed = confirm('¿Estás seguro de que quieres eliminar estos datos? Esta acción no se puede deshacer.');
+    if (!confirmed) {
+        return;
+    }
+    
     window.configuracionManager.showNotification('Limpiando datos antiguos...', 'info');
     closeModal('cleanDataModal');
     
     setTimeout(() => {
         try {
-            const orders = window.configuracionManager.db.getOrders();
             let deletedCount = 0;
             const now = new Date();
             const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
             const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
             const customDateObj = customDate ? new Date(customDate) : null;
             
+            // Limpiar órdenes
+            const orders = window.configuracionManager.db.getOrders() || [];
             const ordersToKeep = orders.filter(order => {
-                const orderDate = new Date(order.timestamp);
+                const orderDate = new Date(order.timestamp || order.createdAt || Date.now());
                 
                 // Limpiar pedidos antiguos (30 días)
                 if (cleanOrders && orderDate < thirtyDaysAgo) {
@@ -1196,13 +1202,13 @@ function executeDataClean() {
                 }
                 
                 // Limpiar pedidos cancelados
-                if (cleanCancelled && order.status === 'cancelled') {
+                if (cleanCancelled && (order.status === 'cancelled' || order.status === 'canceled')) {
                     deletedCount++;
                     return false;
                 }
                 
                 // Limpiar pedidos entregados (7 días)
-                if (cleanDelivered && order.status === 'delivered' && orderDate < sevenDaysAgo) {
+                if (cleanDelivered && (order.status === 'delivered' || order.status === 'completed') && orderDate < sevenDaysAgo) {
                     deletedCount++;
                     return false;
                 }
@@ -1219,24 +1225,161 @@ function executeDataClean() {
             // Actualizar órdenes en la base de datos
             localStorage.setItem('pos_orders', JSON.stringify(ordersToKeep));
             
+            // También limpiar ventas relacionadas
+            const sales = JSON.parse(localStorage.getItem('pos_sales') || '[]');
+            const salesToKeep = sales.filter(sale => {
+                const saleDate = new Date(sale.timestamp || sale.createdAt || Date.now());
+                
+                if (cleanOrders && saleDate < thirtyDaysAgo) {
+                    return false;
+                }
+                if (customDateObj && saleDate < customDateObj) {
+                    return false;
+                }
+                return true;
+            });
+            localStorage.setItem('pos_sales', JSON.stringify(salesToKeep));
+            
+            // Limpiar datos de mesas si tienen órdenes antiguas
+            const tables = JSON.parse(localStorage.getItem('pos_tables') || '[]');
+            tables.forEach(table => {
+                if (table.currentOrder) {
+                    const orderDate = new Date(table.currentOrder.timestamp || Date.now());
+                    if ((cleanOrders && orderDate < thirtyDaysAgo) || 
+                        (customDateObj && orderDate < customDateObj)) {
+                        table.currentOrder = null;
+                        table.status = 'available';
+                    }
+                }
+            });
+            localStorage.setItem('pos_tables', JSON.stringify(tables));
+            
             window.configuracionManager.showNotification(
                 `Limpieza completada: ${deletedCount} registros eliminados`, 
                 'success'
             );
+            
         } catch (error) {
             console.error('Error al limpiar datos:', error);
-            window.configuracionManager.showNotification('Error al limpiar los datos', 'error');
+            window.configuracionManager.showNotification('Error al limpiar los datos: ' + error.message, 'error');
         }
     }, 1500);
 }
 
 function restartSystem() {
-    if (confirm('¿Estás seguro de que quieres reiniciar el sistema?')) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'restartSystemModal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Reiniciar Sistema</h3>
+                <button class="modal-close" onclick="closeModal('restartSystemModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Selecciona el tipo de reinicio:</p>
+                
+                <div class="form-group">
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="restartType" value="soft" checked>
+                            <span class="radio-mark"></span>
+                            <div>
+                                <strong>Reinicio Suave</strong>
+                                <p>Solo recarga la aplicación sin perder datos</p>
+                            </div>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="restartType" value="full">
+                            <span class="radio-mark"></span>
+                            <div>
+                                <strong>Reinicio Completo</strong>
+                                <p>Limpia TODOS los datos y reinicia el sistema completamente</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="alert alert-danger" id="fullRestartWarning" style="display: none;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>¡ADVERTENCIA!</strong> El reinicio completo eliminará TODOS los datos del sistema: 
+                    pedidos, ventas, configuraciones, usuarios, productos, etc. Esta acción NO se puede deshacer.
+                    Se recomienda encarecidamente crear un respaldo antes de continuar.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('restartSystemModal')">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="executeSystemRestart()">Reiniciar Sistema</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Mostrar advertencia cuando se seleccione reinicio completo
+    modal.querySelectorAll('input[name="restartType"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const warning = document.getElementById('fullRestartWarning');
+            if (this.value === 'full') {
+                warning.style.display = 'block';
+            } else {
+                warning.style.display = 'none';
+            }
+        });
+    });
+}
+
+function executeSystemRestart() {
+    const restartType = document.querySelector('input[name="restartType"]:checked').value;
+    
+    if (restartType === 'full') {
+        // Confirmación adicional para reinicio completo
+        const confirmed = confirm('¿Estás ABSOLUTAMENTE seguro de que quieres eliminar TODOS los datos del sistema? Esta acción NO se puede deshacer.');
+        if (!confirmed) {
+            return;
+        }
+        
+        window.configuracionManager.showNotification('Reiniciando sistema completo...', 'info');
+        closeModal('restartSystemModal');
+        
+        setTimeout(() => {
+            try {
+                // Limpiar TODOS los datos del localStorage
+                const keysToKeep = ['theme']; // Mantener solo el tema si existe
+                const allKeys = Object.keys(localStorage);
+                
+                allKeys.forEach(key => {
+                    if (!keysToKeep.includes(key)) {
+                        localStorage.removeItem(key);
+                    }
+                });
+                
+                // También limpiar sessionStorage
+                sessionStorage.clear();
+                
+                window.configuracionManager.showNotification('Sistema completamente reiniciado', 'success');
+                
+                // Redirigir al login después de limpiar todo
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 1500);
+                
+            } catch (error) {
+                console.error('Error al reiniciar sistema:', error);
+                window.configuracionManager.showNotification('Error al reiniciar el sistema', 'error');
+            }
+        }, 1500);
+        
+    } else {
+        // Reinicio suave - solo recargar
         window.configuracionManager.showNotification('Reiniciando sistema...', 'info');
+        closeModal('restartSystemModal');
         
         setTimeout(() => {
             location.reload();
-        }, 2000);
+        }, 1500);
     }
 }
 

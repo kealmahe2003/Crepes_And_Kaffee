@@ -137,6 +137,79 @@
     transform: rotate(45deg);
 }
 
+/* Radio buttons personalizados */
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.radio-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    cursor: pointer;
+    padding: 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background: #f8f9fa;
+}
+
+.radio-label:hover {
+    border-color: #ff6b35;
+    background: #fff5f1;
+}
+
+.radio-label input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.radio-mark {
+    position: relative;
+    height: 18px;
+    width: 18px;
+    background: white;
+    border: 2px solid #cbd5e0;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+}
+
+.radio-label input[type="radio"]:checked ~ .radio-mark {
+    background: #ff6b35;
+    border-color: #ff6b35;
+}
+
+.radio-label input[type="radio"]:checked ~ .radio-mark::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: white;
+    transform: translate(-50%, -50%);
+}
+
+.radio-label div {
+    flex: 1;
+}
+
+.radio-label div p {
+    margin: 0.25rem 0 0 0;
+    color: #718096;
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+.radio-label input[type="radio"]:checked ~ div strong {
+    color: #ff6b35;
+}
+
 /* Acciones de formulario */
 .form-actions {
     display: flex;

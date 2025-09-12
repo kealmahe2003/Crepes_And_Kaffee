@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Protección de Autenticación</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background-color: #f5f5f5; 
+        }
+        .test-container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+        }
+        .test-section { 
+            margin: 20px 0; 
+            padding: 20px; 
+            border: 1px solid #ddd; 
+            border-radius: 4px; 
+        }
+        button { 
+            margin: 5px; 
+            padding: 10px 20px; 
+            cursor: pointer; 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+        }
+        button:hover { background: #0056b3; }
+        .status { 
+            margin: 10px 0; 
+            padding: 10px; 
+            border-radius: 4px; 
+            font-weight: bold; 
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.warning { background: #fff3cd; color: #856404; }
+        .status.info { background: #d1ecf1; color: #0c5460; }
+        pre { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            border-radius: 4px; 
+            overflow-x: auto; 
+            border-left: 4px solid #007bff; 
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🛡️ Test de Protección de Autenticación</h1>
+        <p>Esta página prueba la protección universal de autenticación y la detección de desconexión del servidor.</p>
+        
+        <div class="test-section">
+            <h2>📊 Estado del Sistema</h2>
+            <div id="authStatus" class="status info">Verificando autenticación...</div>
+            <div id="serverStatus" class="status info">Verificando conexión al servidor...</div>
+            <div id="sessionInfo"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🧪 Controles de Prueba</h2>
+            <button onclick="checkAuth()">Verificar Autenticación</button>
+            <button onclick="checkServer()">Probar Conexión Servidor</button>
+            <button onclick="simulateLogout()">Simular Logout</button>
+            <button onclick="clearSession()">Limpiar Sesión</button>
+            <button onclick="showSessionData()">Mostrar Datos de Sesión</button>
+            <div id="testResults"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📋 Log de Eventos</h2>
+            <button onclick="clearLog()">Limpiar Log</button>
+            <pre id="eventLog">Esperando eventos...</pre>
+        </div>
+
+        <div class="test-section">
+            <h2>ℹ️ Instrucciones de Prueba</h2>
+            <ol>
+                <li><strong>Protección de Página:</strong> Si no estás logueado, deberías haber sido redirigido al login automáticamente.</li>
+                <li><strong>Sesión Válida:</strong> Si llegaste aquí, significa que el sistema detectó una sesión válida.</li>
+                <li><strong>Desconexión del Servidor:</strong> Para probar la detección de desconexión, cierra el servidor desde la terminal.</li>
+                <li><strong>Monitoreo Continuo:</strong> El sistema verifica la conexión cada 10 segundos y cuando cambias de pestaña.</li>
+                <li><strong>Limpieza de Sesión:</strong> Cuando se detecta desconexión, la sesión se limpia automáticamente.</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- Scripts necesarios para la protección -->
+    <script src="assets/js/database.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/auth-guard.js"></script>
+
+    <script>
+        // Variables globales
+        let eventLog = [];
+        
+        // Función para agregar eventos al log
+        function addToLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${type.toUpperCase()}: ${message}`;
+            eventLog.push(logEntry);
+            updateLogDisplay();
+            console.log(logEntry);
+        }
+
+        // Actualizar la visualización del log
+        function updateLogDisplay() {
+            const logElement = document.getElementById('eventLog');
+            logElement.textContent = eventLog.slice(-20).join('\n'); // Mostrar solo los últimos 20 eventos
+        }
+
+        // Verificar autenticación manualmente
+        function checkAuth() {
+            const auth = new Auth();
+            const isLoggedIn = auth.isLoggedIn();
+            const currentUser = auth.getCurrentUser();
+            
+            const authStatus = document.getElementById('authStatus');
+            if (isLoggedIn && currentUser) {
+                authStatus.className = 'status success';
+                authStatus.textContent = `✅ Autenticado como: ${currentUser.name} (${currentUser.role})`;
+                addToLog(`Usuario autenticado: ${currentUser.username}`, 'success');
+            } else {
+                authStatus.className = 'status error';
+                authStatus.textContent = '❌ No autenticado';
+                addToLog('Usuario no autenticado', 'error');
+            }
+        }
+
+        // Verificar conexión al servidor
+        async function checkServer() {
+            const serverStatus = document.getElementById('serverStatus');
+            try {
+                const response = await fetch(window.location.origin + '/login.html', {
+                    method: 'HEAD',
+                    cache: 'no-cache'
+                });
+                
+                if (response.ok) {
+                    serverStatus.className = 'status success';
+                    serverStatus.textContent = '✅ Servidor conectado';
+                    addToLog('Conexión al servidor OK', 'success');
+                } else {
+                    throw new Error('Respuesta no válida del servidor');
+                }
+            } catch (error) {
+                serverStatus.className = 'status error';
+                serverStatus.textContent = '❌ Servidor desconectado';
+                addToLog(`Error de conexión: ${error.message}`, 'error');
+            }
+        }
+
+        // Simular logout
+        function simulateLogout() {
+            const auth = new Auth();
+            auth.logout();
+            addToLog('Logout simulado - sesión limpiada', 'warning');
+            setTimeout(() => {
+                checkAuth();
+            }, 100);
+        }
+
+        // Limpiar sesión manualmente
+        function clearSession() {
+            localStorage.removeItem('pos_current_user');
+            localStorage.removeItem('pos_current_cash_session');
+            addToLog('Sesión limpiada manualmente', 'warning');
+            setTimeout(() => {
+                checkAuth();
+            }, 100);
+        }
+
+        // Mostrar datos de sesión
+        function showSessionData() {
+            const sessionData = {
+                currentUser: localStorage.getItem('pos_current_user'),
+                cashSession: localStorage.getItem('pos_current_cash_session'),
+                allKeys: Object.keys(localStorage).filter(key => key.startsWith('pos_'))
+            };
+            
+            const sessionInfo = document.getElementById('sessionInfo');
+            sessionInfo.innerHTML = `
+                <h3>📦 Datos de Sesión:</h3>
+                <pre>${JSON.stringify(sessionData, null, 2)}</pre>
+            `;
+            addToLog('Datos de sesión mostrados', 'info');
+        }
+
+        // Limpiar log
+        function clearLog() {
+            eventLog = [];
+            updateLogDisplay();
+        }
+
+        // Escuchar eventos del AuthGuard
+        window.addEventListener('load', () => {
+            addToLog('Página cargada - iniciando verificaciones', 'info');
+            checkAuth();
+            checkServer();
+            
+            // Verificar cada 5 segundos para esta prueba
+            setInterval(() => {
+                checkAuth();
+                checkServer();
+            }, 5000);
+        });
+
+        // Escuchar cambios en localStorage (para detectar logouts)
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'pos_current_user') {
+                addToLog(`Cambio en sesión detectado: ${e.newValue ? 'Login' : 'Logout'}`, 'info');
+                checkAuth();
+            }
+        });
+
+        // Escuchar eventos de autenticación personalizados
+        document.addEventListener('authGuardEvent', (e) => {
+            addToLog(`Evento AuthGuard: ${e.detail.type} - ${e.detail.message}`, e.detail.level || 'info');
+        });
+    </script>
+</body>
+</html>

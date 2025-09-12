@@ -1,30 +1,67 @@
 // Sistema de Protección de Autenticación
 class AuthGuard {
     constructor() {
+        // Asegurar que existe una instancia de Auth
+        if (!window.auth) {
+            window.auth = new Auth();
+        }
+        this.auth = window.auth;
+        this.initialized = false;
         this.init();
     }
 
     init() {
-        // Verificar autenticación al cargar cualquier página
+        // Evitar múltiples inicializaciones
+        if (this.initialized) return;
+        
+        // Verificar autenticación inmediatamente (sin esperar DOMContentLoaded)
+        this.checkAuthentication();
+        
+        // También verificar cuando el DOM esté listo
         document.addEventListener('DOMContentLoaded', () => {
             this.checkAuthentication();
             this.setupLogoutHandlers();
+            this.setupServerConnectionMonitoring();
         });
+        
+        // Verificar sesión cada 30 segundos
+        setInterval(() => {
+            this.validateSession();
+        }, 30000);
+        
+        // Verificar cuando la página reciba el foco
+        window.addEventListener('focus', () => {
+            this.validateSession();
+        });
+        
+        this.initialized = true;
     }
 
     checkAuthentication() {
+        // Evitar loops de redirección
+        if (this._redirecting) return;
+        
         // Si estamos en la página de login, no hacer verificaciones
         if (window.location.pathname.includes('login.html')) {
             // Si ya está logueado, redirigir al dashboard
-            if (auth.isLoggedIn()) {
-                window.location.href = 'dashboard.html';
+            if (this.auth.isLoggedIn()) {
+                this._redirecting = true;
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 100);
             }
             return;
         }
 
         // Para todas las demás páginas, verificar autenticación
-        if (!auth.isLoggedIn()) {
-            window.location.href = 'login.html';
+        if (!this.auth.isLoggedIn()) {
+            this.forceLogin('Debe iniciar sesión para acceder al sistema');
+            return;
+        }
+
+        // Verificar si la sesión es válida
+        if (!this.auth.validateSession()) {
+            this.forceLogin('Su sesión ha expirado');
             return;
         }
 
@@ -35,9 +72,128 @@ class AuthGuard {
         this.updateUserInterface();
     }
 
+    validateSession() {
+        // Si estamos en login, no validar
+        if (window.location.pathname.includes('login.html')) return;
+        
+        // Verificar si hay usuario logueado
+        if (!this.auth.isLoggedIn()) {
+            this.forceLogin('Sesión no válida');
+            return false;
+        }
+
+        // Verificar validez de la sesión
+        if (!this.auth.validateSession()) {
+            this.forceLogin('Su sesión ha expirado');
+            return false;
+        }
+
+        return true;
+    }
+
+    forceLogin(message = 'Debe iniciar sesión') {
+        if (this._redirecting) return;
+        
+        this._redirecting = true;
+        
+        // Emitir evento personalizado
+        this.emitAuthEvent('forceLogin', message, 'warning');
+        
+        // Limpiar cualquier sesión existente
+        this.auth.logout();
+        
+        // Mostrar mensaje si no estamos ya en login
+        if (!window.location.pathname.includes('login.html')) {
+            this.showAuthNotification(message, 'warning');
+        }
+        
+        // Redirigir al login después de un breve delay
+        setTimeout(() => {
+            window.location.href = 'login.html';
+        }, 500);
+    }
+
+    setupServerConnectionMonitoring() {
+        // Monitorear conexión al servidor cada 10 segundos
+        this.serverCheckInterval = setInterval(() => {
+            this.checkServerConnection();
+        }, 10000);
+
+        // Verificar cuando la ventana recibe foco (usuario vuelve a la pestaña)
+        window.addEventListener('focus', () => {
+            this.checkServerConnection();
+        });
+
+        // Manejar eventos de conexión de red
+        window.addEventListener('online', () => {
+            this.checkServerConnection();
+        });
+
+        window.addEventListener('offline', () => {
+            this.handleServerDisconnection();
+        });
+    }
+
+    async checkServerConnection() {
+        try {
+            // Intentar hacer una petición al servidor
+            const response = await fetch(window.location.origin + '/test-connection', {
+                method: 'HEAD',
+                cache: 'no-cache',
+                timeout: 5000
+            });
+            
+            // Si no hay respuesta, el servidor está caído
+            if (!response.ok) {
+                this.handleServerDisconnection();
+            }
+        } catch (error) {
+            // Error de conexión - servidor probablemente caído
+            this.handleServerDisconnection();
+        }
+    }
+
+    handleServerDisconnection() {
+        // Limpiar interval de verificación
+        if (this.serverCheckInterval) {
+            clearInterval(this.serverCheckInterval);
+            this.serverCheckInterval = null;
+        }
+
+        // Emitir evento personalizado
+        this.emitAuthEvent('serverDisconnected', 'Conexión con el servidor perdida', 'error');
+
+        // Mostrar notificación
+        this.showAuthNotification('Conexión con el servidor perdida. Cerrando sesión por seguridad.', 'error');
+        
+        // Cerrar sesión y limpiar datos
+        this.auth.logout();
+        
+        // Redirigir al login después de 2 segundos
+        setTimeout(() => {
+            window.location.href = 'login.html';
+        }, 2000);
+    }
+
+    emitAuthEvent(type, message, level = 'info') {
+        // Emitir evento personalizado para que las páginas puedan escucharlo
+        const event = new CustomEvent('authGuardEvent', {
+            detail: {
+                type: type,
+                message: message,
+                level: level,
+                timestamp: new Date().toISOString()
+            }
+        });
+        document.dispatchEvent(event);
+        
+        // También loggear en consola para debugging
+        console.log(`[AuthGuard] ${type}: ${message}`);
+    }
+
     checkPagePermissions() {
         const currentPage = window.location.pathname.toLowerCase();
-        const user = auth.getCurrentUser();
+        const user = this.auth.getCurrentUser();
         
         if (!user) return;
 
@@ -61,7 +217,7 @@ class AuthGuard {
                 }
                 
                 // Para otras páginas, verificar permisos específicos
-                if (!auth.hasPermission(permission)) {
+                if (!this.auth.hasPermission(permission)) {
                     alert(`No tiene permisos para acceder a este módulo.\nSu rol: ${user.role}\nPermiso requerido: ${permission}`);
                     window.location.href = 'dashboard.html';
                     return;
@@ -72,7 +228,7 @@ class AuthGuard {
     }
 
     updateUserInterface() {
-        const user = auth.getCurrentUser();
+        const user = this.auth.getCurrentUser();
         if (!user) return;
 
         // Actualizar nombre de usuario si existe el elemento
@@ -145,8 +301,9 @@ class AuthGuard {
             }
 
             // Realizar logout
-            auth.logout();
-            window.location.href = 'login.html';
+            this._redirecting = true;
+            this.auth.logout();
+            // No hacer redirección manual aquí, auth.logout() ya lo maneja
         }
     }
 
@@ -172,8 +329,9 @@ class AuthGuard {
                 if (confirm('Su sesión ha expirado por inactividad. ¿Desea continuar?')) {
                     resetTimer(); // Resetear si el usuario quiere continuar
                 } else {
-                    auth.logout();
-                    window.location.href = 'login.html';
+                    this._redirecting = true;
+                    this.auth.logout();
+                    // No hacer redirección manual aquí
                 }
             }, INACTIVITY_TIME);
         };
@@ -234,5 +392,7 @@ class AuthGuard {
     }
 }
 
-// Inicializar el guard de autenticación globalmente
-window.authGuard = new AuthGuard();
+// Inicializar el guard de autenticación globalmente (solo una vez)
+if (!window.authGuard) {
+    window.authGuard = new AuthGuard();
+}

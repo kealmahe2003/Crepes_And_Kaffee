@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Ventas - Crêpes & Kaffee</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/ventas.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 class="sidebar-title">MENÚ PRINCIPAL</h1>
+                <div class="sidebar-subtitle">Sistema POS</div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <div class="nav-item">
+                    <a href="dashboard.html" class="nav-link">
+                        <i class="fas fa-tachometer-alt"></i>
+                        Dashboard
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="ventas.html" class="nav-link active">
+                        <i class="fas fa-cash-register"></i>
+                        Ventas
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="pedidos.html" class="nav-link">
+                        <i class="fas fa-clipboard-list"></i>
+                        Pedidos
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="mesas.html" class="nav-link">
+                        <i class="fas fa-chair"></i>
+                        Mesas
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="estadisticas.html" class="nav-link">
+                        <i class="fas fa-chart-bar"></i>
+                        Estadísticas
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="configuracion.html" class="nav-link">
+                        <i class="fas fa-cog"></i>
+                        Configuración
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="#" class="nav-link logout-btn">
+                        <i class="fas fa-sign-out-alt"></i>
+                        Cerrar Sesión
+                    </a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="content-header">
+                <h1>Ventas</h1>
+                <div class="user-info">
+                    <span id="user-display">Sistema POS</span>
+                </div>
+            </div>
+
+            <div class="sales-container">
+                <!-- Productos -->
+                <div class="products-section">
+                    <div class="section-header">
+                        <h2>Productos</h2>
+                        <div class="search-container">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="searchInput" placeholder="Buscar productos..." />
+                        </div>
+                    </div>
+
+                    <!-- Categorías -->
+                    <div class="categories-container" id="categoriesContainer"></div>
+
+                    <!-- Lista de productos -->
+                    <div class="products-grid" id="productsList"></div>
+                </div>
+
+                <!-- Carrito y Orden -->
+                <div class="cart-section">
+                    <div class="section-header">
+                        <h2>Orden Actual</h2>
+                    </div>
+
+                    <!-- Tipo de Orden -->
+                    <div class="order-type-section">
+                        <div class="order-type-buttons">
+                            <button class="order-type-btn active" data-type="dine-in">
+                                <i class="fas fa-utensils"></i>
+                                Local
+                            </button>
+                            <button class="order-type-btn" data-type="takeaway">
+                                <i class="fas fa-shopping-bag"></i>
+                                Para Llevar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Selección de Mesa (solo para local) -->
+                    <div class="table-selection" id="tableSelection">
+                        <h3>Seleccionar Mesa</h3>
+                        <div class="tables-grid" id="tablesGrid"></div>
+                    </div>
+
+                    <!-- Carrito -->
+                    <div class="cart-container">
+                        <div class="cart-header">
+                            <h3>Items</h3>
+                            <button class="clear-cart-btn" id="clearCartBtn">
+                                <i class="fas fa-trash"></i>
+                                Limpiar
+                            </button>
+                        </div>
+                        <div class="cart-items" id="cartItems"></div>
+                    </div>
+
+                    <!-- Total y Acciones -->
+                    <div class="cart-footer">
+                        <div class="total-section">
+                            <div class="total-line">
+                                <span>Total:</span>
+                                <span class="total-amount" id="totalAmount">$0</span>
+                            </div>
+                        </div>
+                        <div class="cart-actions">
+                            <button class="confirm-order-btn" id="confirmOrderBtn">
+                                <i class="fas fa-check"></i>
+                                Confirmar Orden
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Debug info -->
+    <div style="position: fixed; top: 10px; right: 10px; background: #000; color: #fff; padding: 10px; border-radius: 4px; font-size: 12px; z-index: 9999;">
+        <div>Estado: <span id="debug-status">Cargando...</span></div>
+        <div>SalesManager: <span id="debug-salesmanager">No</span></div>
+        <div>Carrito: <span id="debug-cart">0</span></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/database.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/ventas.js"></script>
+    
+    <script>
+        // Debug script
+        function updateDebugInfo() {
+            document.getElementById('debug-status').textContent = 'Activo';
+            document.getElementById('debug-salesmanager').textContent = window.salesManager ? 'Sí' : 'No';
+            document.getElementById('debug-cart').textContent = window.salesManager ? window.salesManager.cart.length : '0';
+        }
+
+        // Login automático para testing
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                // Auto login
+                if (window.Auth) {
+                    const auth = new Auth();
+                    auth.login('admin', 'admin123');
+                }
+                
+                updateDebugInfo();
+                setInterval(updateDebugInfo, 1000);
+            }, 500);
+        });
+    </script>
+</body>
+</html>
