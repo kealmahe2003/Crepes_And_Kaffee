@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Mesas</title>
+</head>
+<body>
+    <h1>Probando sistema de mesas</h1>
+    <div id="results"></div>
+
+    <script src="assets/js/database.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script>
+        const results = document.getElementById('results');
+        
+        function log(message) {
+            results.innerHTML += '<p>' + message + '</p>';
+            console.log(message);
+        }
+
+        // Inicializar
+        const db = new Database();
+        const auth = new Auth();
+
+        // Login automático
+        const loginResult = auth.login('admin', 'admin123');
+        if (loginResult.success) {
+            log('✅ Login exitoso: ' + loginResult.user.name);
+            
+            // Verificar mesas existentes
+            const tables = db.getTables();
+            log('📊 Mesas existentes: ' + tables.length);
+            tables.forEach(table => {
+                log(`Mesa ${table.numero}: ${table.estado} (${table.capacidad} personas)`);
+            });
+            
+            // Probar agregar una mesa nueva
+            const newTable = {
+                id: Date.now(),
+                numero: 20,
+                capacidad: 6,
+                ubicacion: 'Terraza',
+                estado: 'libre',
+                fechaCreacion: new Date().toISOString()
+            };
+            
+            try {
+                db.addTable(newTable);
+                log('✅ Mesa agregada exitosamente: Mesa ' + newTable.numero);
+                
+                // Verificar que se agregó
+                const updatedTables = db.getTables();
+                log('📊 Total de mesas después de agregar: ' + updatedTables.length);
+                
+                // Redirigir a mesas
+                setTimeout(() => {
+                    window.location.href = 'mesas.html';
+                }, 2000);
+                
+            } catch (error) {
+                log('❌ Error al agregar mesa: ' + error.message);
+            }
+            
+        } else {
+            log('❌ Error de login: ' + loginResult.message);
+        }
+    </script>
+</body>
+</html>

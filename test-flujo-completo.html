@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Flujo Completo</title>
+</head>
+<body>
+    <h1>Probando Flujo Completo: Ventas → Pedidos → Mesas → Pago</h1>
+    <div id="results"></div>
+
+    <script src="assets/js/database.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script>
+        const results = document.getElementById('results');
+        
+        function log(message) {
+            results.innerHTML += '<p>' + message + '</p>';
+            console.log(message);
+        }
+
+        // Inicializar
+        const db = new Database();
+        const auth = new Auth();
+
+        // Login automático
+        const loginResult = auth.login('admin', 'admin123');
+        if (loginResult.success) {
+            log('✅ Login exitoso');
+            
+            // Crear un pedido de prueba
+            const testOrder = {
+                id: Date.now(),
+                items: [
+                    {
+                        productId: 1,
+                        productName: 'Café Americano',
+                        quantity: 2,
+                        unitPrice: 3500,
+                        subtotal: 7000,
+                        estado: 'pendiente'
+                    },
+                    {
+                        productId: 4,
+                        productName: 'Crêpe de Nutella',
+                        quantity: 1,
+                        unitPrice: 8000,
+                        subtotal: 8000,
+                        estado: 'pendiente'
+                    }
+                ],
+                total: 15000,
+                mesa: 1,
+                tipo: 'mesa',
+                estado: 'pendiente',
+                timestamp: new Date().toISOString(),
+                fecha: new Date().toLocaleDateString('es-ES'),
+                hora: new Date().toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'})
+            };
+            
+            // Guardar el pedido
+            db.saveOrder(testOrder);
+            log('✅ Pedido de prueba creado: #' + testOrder.id);
+            
+            // Actualizar mesa 1 como ocupada
+            const tables = db.getTables();
+            const table1 = tables.find(t => t.numero == 1);
+            if (table1) {
+                table1.estado = 'ocupada';
+                table1.pedidoId = testOrder.id;
+                table1.ultimaActividad = new Date().toISOString();
+                db.updateTable(table1.id, table1);
+                log('✅ Mesa 1 marcada como ocupada');
+            }
+            
+            // Verificar pedidos
+            const orders = db.getOrders();
+            log('📋 Total de pedidos: ' + orders.length);
+            
+            // Verificar mesas
+            const updatedTables = db.getTables();
+            const occupiedTables = updatedTables.filter(t => t.estado === 'ocupada');
+            log('🪑 Mesas ocupadas: ' + occupiedTables.length);
+            
+            setTimeout(() => {
+                log('🚀 Abriendo página de pedidos para probar...');
+                window.open('pedidos.html', '_blank');
+                
+                setTimeout(() => {
+                    log('🚀 Abriendo página de mesas para probar...');
+                    window.open('mesas.html', '_blank');
+                }, 2000);
+            }, 2000);
+            
+        } else {
+            log('❌ Error de login');
+        }
+    </script>
+</body>
+</html>
