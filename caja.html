@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caja Registradora - Crêpes & Kaffee</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/caja.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 class="sidebar-title">MENÚ PRINCIPAL</h1>
+                <div class="sidebar-subtitle">Sistema POS</div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <div class="nav-item">
+                    <a href="dashboard.html" class="nav-link">
+                        <i class="fas fa-tachometer-alt"></i>
+                        Dashboard
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="ventas.html" class="nav-link">
+                        <i class="fas fa-cash-register"></i>
+                        Ventas
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="pedidos.html" class="nav-link">
+                        <i class="fas fa-clipboard-list"></i>
+                        Pedidos
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="mesas.html" class="nav-link">
+                        <i class="fas fa-chair"></i>
+                        Mesas
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="reportes.html" class="nav-link">
+                        <i class="fas fa-chart-line"></i>
+                        Reportes
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="caja.html" class="nav-link active">
+                        <i class="fas fa-cash-register"></i>
+                        Caja
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="configuracion.html" class="nav-link">
+                        <i class="fas fa-cog"></i>
+                        Configuración
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="login.html" class="nav-link" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i>
+                        Cerrar Sesión
+                    </a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="content-header">
+                <div class="header-left">
+                    <h1 class="page-title">
+                        <i class="fas fa-cash-register"></i>
+                        Caja Registradora
+                    </h1>
+                    <p class="page-subtitle">Control de caja y movimientos</p>
+                </div>
+                
+                <div class="header-right">
+                    <div class="user-info">
+                        <span class="user-role" id="userRole">Cajero</span>
+                        <span class="user-name" id="userName">Usuario</span>
+                    </div>
+                    <div class="current-time" id="currentTime"></div>
+                </div>
+            </div>
+
+            <!-- Cash Container -->
+            <div class="content-body">
+                <div id="cashContainer" class="cash-container">
+                    <!-- El contenido se cargará dinámicamente -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/database.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/auth-guard.js"></script>
+    <script src="assets/js/caja.js"></script>
+    
+    <script>
+        function logout() {
+            authGuard.handleLogout();
+        }
+
+        // Actualizar reloj
+        function updateClock() {
+            const now = new Date();
+            const timeElement = document.getElementById('currentTime');
+            if (timeElement) {
+                timeElement.textContent = now.toLocaleTimeString('es-CO');
+            }
+        }
+
+        // Actualizar info del usuario
+        function updateUserInfo() {
+            const userData = localStorage.getItem('pos_current_user');
+            if (userData) {
+                const user = JSON.parse(userData);
+                const userNameElement = document.getElementById('userName');
+                const userRoleElement = document.getElementById('userRole');
+                
+                if (userNameElement) userNameElement.textContent = user.name;
+                if (userRoleElement) userRoleElement.textContent = user.role;
+            }
+        }
+
+        // Inicializar
+        setInterval(updateClock, 1000);
+        updateClock();
+        updateUserInfo();
+    </script>
+</body>
+</html>

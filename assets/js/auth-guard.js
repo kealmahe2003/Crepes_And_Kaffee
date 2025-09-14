@@ -7,6 +7,8 @@ class AuthGuard {
         }
         this.auth = window.auth;
         this.initialized = false;
+        this._redirecting = false;
+        this._checkingAuth = false; // Nuevo flag para evitar verificaciones múltiples
         this.init();
     }
 
@@ -38,38 +40,54 @@ class AuthGuard {
     }
 
     checkAuthentication() {
-        // Evitar loops de redirección
-        if (this._redirecting) return;
+        // Evitar loops de redirección y verificaciones múltiples
+        if (this._redirecting || this._checkingAuth) return;
         
-        // Si estamos en la página de login, no hacer verificaciones
-        if (window.location.pathname.includes('login.html')) {
-            // Si ya está logueado, redirigir al dashboard
-            if (this.auth.isLoggedIn()) {
-                this._redirecting = true;
-                setTimeout(() => {
-                    window.location.href = 'dashboard.html';
-                }, 100);
+        this._checkingAuth = true;
+        
+        try {
+            // Si estamos en la página de login, manejar de forma especial
+            if (window.location.pathname.includes('login.html')) {
+                // Solo redirigir si hay un usuario válido Y si no estamos en proceso de login
+                if (this.auth.isLoggedIn() && this.auth.validateSession()) {
+                    // Verificar si no hay un proceso de login en curso
+                    const loginForm = document.getElementById('loginForm');
+                    if (!loginForm || !document.activeElement || document.activeElement.tagName !== 'INPUT') {
+                        // Solo redirigir si no estamos en medio de un proceso de login
+                        console.log('[AuthGuard] Usuario ya logueado, redirigiendo al dashboard');
+                        this._redirecting = true;
+                        setTimeout(() => {
+                            window.location.href = 'dashboard.html';
+                        }, 100);
+                    }
+                }
+                return;
             }
-            return;
-        }
 
-        // Para todas las demás páginas, verificar autenticación
-        if (!this.auth.isLoggedIn()) {
-            this.forceLogin('Debe iniciar sesión para acceder al sistema');
-            return;
-        }
+            // Para todas las demás páginas, verificar autenticación
+            if (!this.auth.isLoggedIn()) {
+                this.forceLogin('Debe iniciar sesión para acceder al sistema');
+                return;
+            }
 
-        // Verificar si la sesión es válida
-        if (!this.auth.validateSession()) {
-            this.forceLogin('Su sesión ha expirado');
-            return;
-        }
+            // Verificar si la sesión es válida
+            if (!this.auth.validateSession()) {
+                this.forceLogin('Su sesión ha expirado');
+                return;
+            }
 
-        // Verificar permisos específicos según la página
-        this.checkPagePermissions();
-        
-        // Actualizar información del usuario en la interfaz
-        this.updateUserInterface();
+            // Verificar permisos específicos según la página
+            this.checkPagePermissions();
+            
+            // Actualizar información del usuario en la interfaz
+            this.updateUserInterface();
+            
+        } finally {
+            // Siempre limpiar el flag, incluso si hay error
+            setTimeout(() => {
+                this._checkingAuth = false;
+            }, 100);
+        }
     }
 
     validateSession() {
@@ -92,7 +110,14 @@ class AuthGuard {
     }
 
     forceLogin(message = 'Debe iniciar sesión') {
+        // Prevenir múltiples redirecciones
         if (this._redirecting) return;
+        
+        // Si ya estamos en login, no hacer nada
+        if (window.location.pathname.includes('login.html')) {
+            console.log('[AuthGuard] Ya estamos en login, no redirigir');
+            return;
+        }
         
         this._redirecting = true;
         
@@ -102,12 +127,11 @@ class AuthGuard {
         // Limpiar cualquier sesión existente
         this.auth.logout();
         
-        // Mostrar mensaje si no estamos ya en login
-        if (!window.location.pathname.includes('login.html')) {
-            this.showAuthNotification(message, 'warning');
-        }
+        // Mostrar mensaje
+        this.showAuthNotification(message, 'warning');
         
         // Redirigir al login después de un breve delay
+        console.log('[AuthGuard] Redirigiendo a login:', message);
         setTimeout(() => {
             window.location.href = 'login.html';
         }, 500);

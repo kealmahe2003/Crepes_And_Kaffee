@@ -47,6 +47,57 @@
     animation: fadeInUp 0.4s ease-out;
 }
 
+/* Barras de progreso para limpieza de datos */
+.progress-container {
+    text-align: center;
+    padding: 1rem 0;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 20px;
+    background-color: #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 1rem 0;
+    position: relative;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff6b35, #ff8c42);
+    width: 0%;
+    transition: width 0.5s ease;
+    border-radius: 10px;
+    position: relative;
+}
+
+.progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+#cleanStatus {
+    margin: 0.5rem 0;
+    font-weight: 500;
+    color: #4a5568;
+}
+
 /* Formularios */
 .config-form {
     display: flex;
