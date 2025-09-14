@@ -541,6 +541,198 @@ class ConfiguracionManager {
             modal.classList.remove('active');
         }
     }
+
+    cleanOldData() {
+        console.log('cleanOldData called'); // Para debug
+        
+        try {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.id = 'cleanDataModal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>🧹 Limpiar Datos Antiguos</h3>
+                        <button class="modal-close" onclick="window.configuracionManager.closeModal('cleanDataModal')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Selecciona qué datos quieres limpiar:</p>
+                        
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="cleanOrders" checked>
+                                <span class="checkmark"></span>
+                                Pedidos antiguos (más de 30 días)
+                            </label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="cleanCancelledOrders" checked>
+                                <span class="checkmark"></span>
+                                Pedidos cancelados
+                            </label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="cleanDeliveredOrders" checked>
+                                <span class="checkmark"></span>
+                                Pedidos entregados (más de 7 días)
+                            </label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="customCleanDate">Eliminar datos anteriores a:</label>
+                            <input type="date" id="customCleanDate" class="form-control">
+                            <small>Deja vacío para usar las opciones por defecto</small>
+                        </div>
+                        
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>¡Atención!</strong> Esta acción no se puede deshacer.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="window.configuracionManager.closeModal('cleanDataModal')">Cancelar</button>
+                        <button type="button" class="btn btn-danger" onclick="window.configuracionManager.executeDataClean()">
+                            <i class="fas fa-trash"></i>
+                            Limpiar Datos
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Mostrar notificación de que se abrió el modal
+            this.showNotification('Modal de limpieza de datos abierto', 'info');
+            
+        } catch (error) {
+            console.error('Error en cleanOldData:', error);
+            this.showNotification('Error al abrir el modal de limpieza: ' + error.message, 'error');
+        }
+    }
+
+    executeDataClean() {
+        console.log('executeDataClean called'); // Para debug
+        
+        try {
+            const cleanOrders = document.getElementById('cleanOrders')?.checked || false;
+            const cleanCancelled = document.getElementById('cleanCancelledOrders')?.checked || false;
+            const cleanDelivered = document.getElementById('cleanDeliveredOrders')?.checked || false;
+            const customDate = document.getElementById('customCleanDate')?.value || '';
+            
+            if (!cleanOrders && !cleanCancelled && !cleanDelivered) {
+                this.showNotification('Selecciona al menos una opción de limpieza', 'warning');
+                return;
+            }
+
+            // Cerrar modal actual
+            this.closeModal('cleanDataModal');
+            
+            // Mostrar confirmación simple
+            if (!confirm('¿Estás seguro de que quieres eliminar estos datos? Esta acción no se puede deshacer.')) {
+                return;
+            }
+
+            this.showNotification('Iniciando limpieza de datos...', 'info');
+
+            // Ejecutar limpieza
+            setTimeout(() => {
+                let deletedCount = 0;
+                const now = new Date();
+                const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+                const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+                const customDateObj = customDate ? new Date(customDate) : null;
+
+                try {
+                    // Limpiar órdenes
+                    const orders = this.db.getOrders() || [];
+                    const initialOrderCount = orders.length;
+                    
+                    const ordersToKeep = orders.filter(order => {
+                        const orderDate = new Date(order.timestamp || order.createdAt || Date.now());
+                        
+                        // Limpiar pedidos antiguos (30 días)
+                        if (cleanOrders && orderDate < thirtyDaysAgo) {
+                            deletedCount++;
+                            return false;
+                        }
+                        
+                        // Limpiar pedidos cancelados
+                        if (cleanCancelled && (order.estado === 'cancelado' || order.status === 'cancelled' || order.status === 'canceled')) {
+                            deletedCount++;
+                            return false;
+                        }
+                        
+                        // Limpiar pedidos entregados (7 días)
+                        if (cleanDelivered && (order.estado === 'entregado' || order.estado === 'pagado' || order.status === 'delivered' || order.status === 'completed') && orderDate < sevenDaysAgo) {
+                            deletedCount++;
+                            return false;
+                        }
+                        
+                        // Fecha límite personalizada
+                        if (customDateObj && orderDate < customDateObj) {
+                            deletedCount++;
+                            return false;
+                        }
+                        
+                        return true;
+                    });
+
+                    // Actualizar órdenes en la base de datos
+                    localStorage.setItem('pos_orders', JSON.stringify(ordersToKeep));
+
+                    // También limpiar ventas relacionadas
+                    const sales = JSON.parse(localStorage.getItem('pos_sales') || '[]');
+                    const salesToKeep = sales.filter(sale => {
+                        const saleDate = new Date(sale.timestamp || sale.createdAt || Date.now());
+                        
+                        if (cleanOrders && saleDate < thirtyDaysAgo) {
+                            return false;
+                        }
+                        if (customDateObj && saleDate < customDateObj) {
+                            return false;
+                        }
+                        return true;
+                    });
+                    localStorage.setItem('pos_sales', JSON.stringify(salesToKeep));
+
+                    // Limpiar datos de mesas si tienen órdenes antiguas
+                    const tables = JSON.parse(localStorage.getItem('pos_tables') || '[]');
+                    let cleanedTables = 0;
+                    tables.forEach(table => {
+                        if (table.currentOrder) {
+                            const orderDate = new Date(table.currentOrder.timestamp || Date.now());
+                            if ((cleanOrders && orderDate < thirtyDaysAgo) || 
+                                (customDateObj && orderDate < customDateObj)) {
+                                table.currentOrder = null;
+                                table.estado = 'libre';
+                                cleanedTables++;
+                            }
+                        }
+                    });
+                    localStorage.setItem('pos_tables', JSON.stringify(tables));
+
+                    this.showNotification(
+                        `✅ Limpieza completada: ${deletedCount} pedidos eliminados, ${cleanedTables} mesas limpiadas`, 
+                        'success'
+                    );
+
+                } catch (error) {
+                    console.error('Error al limpiar datos:', error);
+                    this.showNotification('❌ Error al limpiar los datos: ' + error.message, 'error');
+                }
+            }, 500);
+            
+        } catch (error) {
+            console.error('Error en executeDataClean:', error);
+            this.showNotification('Error en la función de limpieza: ' + error.message, 'error');
+        }
+    }
 }
 
 // Funciones globales para eventos del DOM
@@ -1108,165 +1300,16 @@ function restoreBackup() {
     }
 }
 
-function cleanOldData() {
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.id = 'cleanDataModal';
-    modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Limpiar Datos Antiguos</h3>
-                <button class="modal-close" onclick="closeModal('cleanDataModal')">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p>Selecciona qué datos antiguos deseas eliminar:</p>
-                
-                <div class="form-group">
-                    <div class="checkbox-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="cleanOrders" checked>
-                            <span class="checkmark"></span>
-                            Pedidos anteriores a 30 días
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="cleanCancelledOrders">
-                            <span class="checkmark"></span>
-                            Pedidos cancelados
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="cleanDeliveredOrders">
-                            <span class="checkmark"></span>
-                            Pedidos entregados anteriores a 7 días
-                        </label>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label>Fecha límite personalizada:</label>
-                    <input type="date" id="customCleanDate" class="form-input">
-                </div>
-                
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    Esta acción no se puede deshacer. Se recomienda crear un respaldo antes de continuar.
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('cleanDataModal')">Cancelar</button>
-                <button type="button" class="btn btn-warning" onclick="executeDataClean()">Limpiar Datos</button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-}
-
-function executeDataClean() {
-    const cleanOrders = document.getElementById('cleanOrders').checked;
-    const cleanCancelled = document.getElementById('cleanCancelledOrders').checked;
-    const cleanDelivered = document.getElementById('cleanDeliveredOrders').checked;
-    const customDate = document.getElementById('customCleanDate').value;
-    
-    if (!cleanOrders && !cleanCancelled && !cleanDelivered) {
-        window.configuracionManager.showNotification('Selecciona al menos una opción de limpieza', 'warning');
-        return;
-    }
-    
-    const confirmed = confirm('¿Estás seguro de que quieres eliminar estos datos? Esta acción no se puede deshacer.');
-    if (!confirmed) {
-        return;
-    }
-    
-    window.configuracionManager.showNotification('Limpiando datos antiguos...', 'info');
-    closeModal('cleanDataModal');
-    
-    setTimeout(() => {
-        try {
-            let deletedCount = 0;
-            const now = new Date();
-            const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
-            const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
-            const customDateObj = customDate ? new Date(customDate) : null;
-            
-            // Limpiar órdenes
-            const orders = window.configuracionManager.db.getOrders() || [];
-            const ordersToKeep = orders.filter(order => {
-                const orderDate = new Date(order.timestamp || order.createdAt || Date.now());
-                
-                // Limpiar pedidos antiguos (30 días)
-                if (cleanOrders && orderDate < thirtyDaysAgo) {
-                    deletedCount++;
-                    return false;
-                }
-                
-                // Limpiar pedidos cancelados
-                if (cleanCancelled && (order.status === 'cancelled' || order.status === 'canceled')) {
-                    deletedCount++;
-                    return false;
-                }
-                
-                // Limpiar pedidos entregados (7 días)
-                if (cleanDelivered && (order.status === 'delivered' || order.status === 'completed') && orderDate < sevenDaysAgo) {
-                    deletedCount++;
-                    return false;
-                }
-                
-                // Fecha límite personalizada
-                if (customDateObj && orderDate < customDateObj) {
-                    deletedCount++;
-                    return false;
-                }
-                
-                return true;
-            });
-            
-            // Actualizar órdenes en la base de datos
-            localStorage.setItem('pos_orders', JSON.stringify(ordersToKeep));
-            
-            // También limpiar ventas relacionadas
-            const sales = JSON.parse(localStorage.getItem('pos_sales') || '[]');
-            const salesToKeep = sales.filter(sale => {
-                const saleDate = new Date(sale.timestamp || sale.createdAt || Date.now());
-                
-                if (cleanOrders && saleDate < thirtyDaysAgo) {
-                    return false;
-                }
-                if (customDateObj && saleDate < customDateObj) {
-                    return false;
-                }
-                return true;
-            });
-            localStorage.setItem('pos_sales', JSON.stringify(salesToKeep));
-            
-            // Limpiar datos de mesas si tienen órdenes antiguas
-            const tables = JSON.parse(localStorage.getItem('pos_tables') || '[]');
-            tables.forEach(table => {
-                if (table.currentOrder) {
-                    const orderDate = new Date(table.currentOrder.timestamp || Date.now());
-                    if ((cleanOrders && orderDate < thirtyDaysAgo) || 
-                        (customDateObj && orderDate < customDateObj)) {
-                        table.currentOrder = null;
-                        table.status = 'available';
-                    }
-                }
-            });
-            localStorage.setItem('pos_tables', JSON.stringify(tables));
-            
-            window.configuracionManager.showNotification(
-                `Limpieza completada: ${deletedCount} registros eliminados`, 
-                'success'
-            );
-            
-        } catch (error) {
-            console.error('Error al limpiar datos:', error);
-            window.configuracionManager.showNotification('Error al limpiar los datos: ' + error.message, 'error');
-        }
-    }, 1500);
-}
-
 function restartSystem() {
+    console.log('Función restartSystem() llamada');
+    
+    // Verificar que las dependencias necesarias estén disponibles
+    if (!window.configuracionManager) {
+        console.error('ConfiguracionManager no está disponible');
+        alert('Error: El sistema de configuración no está inicializado. Por favor, recarga la página e inténtalo de nuevo.');
+        return;
+    }
+    
     const modal = document.createElement('div');
     modal.className = 'modal';
     modal.id = 'restartSystemModal';
@@ -1292,6 +1335,14 @@ function restartSystem() {
                             </div>
                         </label>
                         <label class="radio-label">
+                            <input type="radio" name="restartType" value="partial">
+                            <span class="radio-mark"></span>
+                            <div>
+                                <strong>Reinicio Parcial</strong>
+                                <p>Limpia solo pedidos y ventas, mantiene productos y configuración</p>
+                            </div>
+                        </label>
+                        <label class="radio-label">
                             <input type="radio" name="restartType" value="full">
                             <span class="radio-mark"></span>
                             <div>
@@ -1300,6 +1351,12 @@ function restartSystem() {
                             </div>
                         </label>
                     </div>
+                </div>
+                
+                <div class="alert alert-warning" id="partialRestartWarning" style="display: none;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>¡ADVERTENCIA!</strong> El reinicio parcial eliminará todos los pedidos, ventas y sesiones de caja,
+                    pero mantendrá los productos, usuarios y configuraciones.
                 </div>
                 
                 <div class="alert alert-danger" id="fullRestartWarning" style="display: none;">
@@ -1317,22 +1374,45 @@ function restartSystem() {
     `;
     
     document.body.appendChild(modal);
+    console.log('Modal de reinicio creado y añadido al DOM');
     
-    // Mostrar advertencia cuando se seleccione reinicio completo
+    // Mostrar advertencia cuando se seleccione reinicio completo o parcial
     modal.querySelectorAll('input[name="restartType"]').forEach(radio => {
         radio.addEventListener('change', function() {
-            const warning = document.getElementById('fullRestartWarning');
+            const fullWarning = document.getElementById('fullRestartWarning');
+            const partialWarning = document.getElementById('partialRestartWarning');
+            
             if (this.value === 'full') {
-                warning.style.display = 'block';
+                fullWarning.style.display = 'block';
+                partialWarning.style.display = 'none';
+            } else if (this.value === 'partial') {
+                fullWarning.style.display = 'none';
+                partialWarning.style.display = 'block';
             } else {
-                warning.style.display = 'none';
+                fullWarning.style.display = 'none';
+                partialWarning.style.display = 'none';
             }
         });
     });
+    
+    // Activar el modal
+    setTimeout(() => {
+        modal.classList.add('active');
+    }, 10);
 }
 
 function executeSystemRestart() {
-    const restartType = document.querySelector('input[name="restartType"]:checked').value;
+    console.log('Función executeSystemRestart() llamada');
+    
+    const restartTypeElement = document.querySelector('input[name="restartType"]:checked');
+    if (!restartTypeElement) {
+        console.error('No se pudo encontrar el tipo de reinicio seleccionado');
+        alert('Error: No se pudo determinar el tipo de reinicio. Inténtalo de nuevo.');
+        return;
+    }
+    
+    const restartType = restartTypeElement.value;
+    console.log('Tipo de reinicio seleccionado:', restartType);
     
     if (restartType === 'full') {
         // Confirmación adicional para reinicio completo
@@ -1341,45 +1421,160 @@ function executeSystemRestart() {
             return;
         }
         
-        window.configuracionManager.showNotification('Reiniciando sistema completo...', 'info');
+        const doubleConfirm = confirm('ÚLTIMA CONFIRMACIÓN: Se eliminarán TODOS los pedidos, ventas, productos, configuraciones y usuarios. ¿Continuar?');
+        if (!doubleConfirm) {
+            return;
+        }
+        
+        if (window.configuracionManager && window.configuracionManager.showNotification) {
+            window.configuracionManager.showNotification('Reiniciando sistema completo...', 'info');
+        }
         closeModal('restartSystemModal');
         
         setTimeout(() => {
             try {
-                // Limpiar TODOS los datos del localStorage
+                console.log('Iniciando reinicio completo del sistema...');
+                
+                // Usar la función de la base de datos si está disponible
+                if (window.Database) {
+                    const db = new Database();
+                    if (typeof db.clearAllData === 'function') {
+                        db.clearAllData();
+                        console.log('Datos limpiados usando Database.clearAllData()');
+                    }
+                }
+                
+                // Limpiar TODOS los datos del localStorage como respaldo
                 const keysToKeep = ['theme']; // Mantener solo el tema si existe
                 const allKeys = Object.keys(localStorage);
+                
+                console.log('Limpiando localStorage. Keys encontradas:', allKeys);
                 
                 allKeys.forEach(key => {
                     if (!keysToKeep.includes(key)) {
                         localStorage.removeItem(key);
+                        console.log('Eliminada key:', key);
                     }
                 });
                 
                 // También limpiar sessionStorage
                 sessionStorage.clear();
+                console.log('SessionStorage limpiado');
                 
-                window.configuracionManager.showNotification('Sistema completamente reiniciado', 'success');
+                // Verificar que se limpiaron los datos
+                const remainingKeys = Object.keys(localStorage);
+                console.log('Keys restantes después de limpiar:', remainingKeys);
+                
+                if (window.configuracionManager && window.configuracionManager.showNotification) {
+                    window.configuracionManager.showNotification('✅ Sistema completamente reiniciado', 'success');
+                }
                 
                 // Redirigir al login después de limpiar todo
                 setTimeout(() => {
+                    console.log('Redirigiendo a login...');
                     window.location.href = 'login.html';
                 }, 1500);
                 
             } catch (error) {
                 console.error('Error al reiniciar sistema:', error);
-                window.configuracionManager.showNotification('Error al reiniciar el sistema', 'error');
+                if (window.configuracionManager && window.configuracionManager.showNotification) {
+                    window.configuracionManager.showNotification('❌ Error al reiniciar el sistema: ' + error.message, 'error');
+                } else {
+                    alert('Error al reiniciar el sistema: ' + error.message);
+                }
             }
         }, 1500);
         
-    } else {
-        // Reinicio suave - solo recargar
-        window.configuracionManager.showNotification('Reiniciando sistema...', 'info');
+    } else if (restartType === 'partial') {
+        // Reinicio parcial - solo limpiar pedidos y ventas
+        const confirmed = confirm('¿Estás seguro de que quieres eliminar TODOS los pedidos y ventas? Se mantendrán los productos y configuraciones.');
+        if (!confirmed) {
+            return;
+        }
+        
+        if (window.configuracionManager && window.configuracionManager.showNotification) {
+            window.configuracionManager.showNotification('Ejecutando reinicio parcial...', 'info');
+        }
         closeModal('restartSystemModal');
         
         setTimeout(() => {
+            try {
+                console.log('Iniciando reinicio parcial del sistema...');
+                
+                // Limpiar solo datos específicos
+                const keysToRemove = [
+                    'pos_orders',
+                    'pos_sales', 
+                    'pos_cash_sessions',
+                    'pos_current_cash_session'
+                ];
+                
+                keysToRemove.forEach(key => {
+                    localStorage.removeItem(key);
+                    console.log('Eliminada key:', key);
+                });
+                
+                // Reinicializar mesas (liberarlas)
+                const tables = JSON.parse(localStorage.getItem('pos_tables') || '[]');
+                tables.forEach(table => {
+                    table.estado = 'libre';
+                    table.clienteActual = null;
+                    table.pedidoActual = null;
+                    table.horaLiberacion = new Date().toISOString();
+                });
+                localStorage.setItem('pos_tables', JSON.stringify(tables));
+                console.log('Mesas liberadas');
+                
+                if (window.configuracionManager && window.configuracionManager.showNotification) {
+                    window.configuracionManager.showNotification('✅ Reinicio parcial completado', 'success');
+                }
+                
+                // Recargar la página
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+                
+            } catch (error) {
+                console.error('Error en reinicio parcial:', error);
+                if (window.configuracionManager && window.configuracionManager.showNotification) {
+                    window.configuracionManager.showNotification('❌ Error en reinicio parcial: ' + error.message, 'error');
+                } else {
+                    alert('Error en reinicio parcial: ' + error.message);
+                }
+            }
+        }, 1500);
+        
+    } else if (restartType === 'soft') {
+        // Reinicio suave - solo recargar
+        if (window.configuracionManager && window.configuracionManager.showNotification) {
+            window.configuracionManager.showNotification('Reiniciando sistema...', 'info');
+        }
+        closeModal('restartSystemModal');
+        
+        setTimeout(() => {
+            console.log('Ejecutando reinicio suave...');
             location.reload();
         }, 1500);
+        
+    } else {
+        console.error('Tipo de reinicio no reconocido:', restartType);
+        if (window.configuracionManager && window.configuracionManager.showNotification) {
+            window.configuracionManager.showNotification('❌ Error: Tipo de reinicio no válido', 'error');
+        } else {
+            alert('Error: Tipo de reinicio no válido');
+        }
+    }
+}
+
+// Función global para cerrar modales
+function closeModal(modalId) {
+    console.log('Cerrando modal:', modalId);
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.remove();
+        console.log('Modal eliminado del DOM');
+    } else {
+        console.warn('No se encontró el modal con ID:', modalId);
     }
 }
 

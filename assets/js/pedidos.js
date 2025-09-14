@@ -310,14 +310,22 @@ class PedidosManager {
                         <i class="fas fa-utensils"></i>
                         Entregar
                     </button>
-                    ${order.mesa ? `
-                        <button class="action-btn payment" onclick="window.location.href='mesas.html'">
-                            <i class="fas fa-credit-card"></i>
-                            Ver Mesa
-                        </button>
-                    ` : ''}
+                    <button class="action-btn payment" onclick="pedidosManager.sacarCuenta('${order.id}')">
+                        <i class="fas fa-receipt"></i>
+                        Sacar Cuenta
+                    </button>
                 `;
             case 'entregado':
+                return `
+                    <button class="action-btn view" onclick="pedidosManager.viewOrderDetails('${order.id}')">
+                        <i class="fas fa-eye"></i>
+                        Ver Detalles
+                    </button>
+                    <button class="action-btn payment" onclick="pedidosManager.sacarCuenta('${order.id}')">
+                        <i class="fas fa-receipt"></i>
+                        Sacar Cuenta
+                    </button>
+                `;
             case 'pagado':
                 return `
                     <button class="action-btn view" onclick="pedidosManager.viewOrderDetails('${order.id}')">
@@ -702,7 +710,27 @@ class PedidosManager {
                         color: white;
                         border-radius: 8px;
                         cursor: pointer;
+                        margin-right: 10px;
                     ">Marcar Entregado</button>
+                    <button onclick="pedidosManager.sacarCuenta('${order.id}'); this.closest('.order-detail-modal').remove();" style="
+                        padding: 10px 20px;
+                        border: 1px solid #2196f3;
+                        background: #2196f3;
+                        color: white;
+                        border-radius: 8px;
+                        cursor: pointer;
+                    ">Sacar Cuenta</button>
+                `;
+            case 'entregado':
+                return `
+                    <button onclick="pedidosManager.sacarCuenta('${order.id}'); this.closest('.order-detail-modal').remove();" style="
+                        padding: 10px 20px;
+                        border: 1px solid #2196f3;
+                        background: #2196f3;
+                        color: white;
+                        border-radius: 8px;
+                        cursor: pointer;
+                    ">Sacar Cuenta</button>
                 `;
             default:
                 return '';
@@ -926,6 +954,188 @@ class PedidosManager {
                 }
             }, 300);
         }, 3000);
+    }
+
+    // Función para sacar cuenta de un pedido
+    sacarCuenta(orderId) {
+        try {
+            const orders = this.db.getOrders();
+            const order = orders.find(o => o.id == orderId);
+            
+            if (!order) {
+                this.showNotification('Pedido no encontrado', 'error');
+                return;
+            }
+
+            // Crear modal de cuenta
+            this.showCuentaModal(order);
+
+        } catch (error) {
+            console.error('Error al sacar cuenta:', error);
+            this.showNotification('Error al generar cuenta', 'error');
+        }
+    }
+
+    // Mostrar modal de cuenta
+    showCuentaModal(order) {
+        const modal = document.createElement('div');
+        modal.className = 'cuenta-modal';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        `;
+
+        const modalContent = document.createElement('div');
+        modalContent.style.cssText = `
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        `;
+
+        const total = order.items.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+
+        modalContent.innerHTML = `
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="color: #333; margin-bottom: 10px;">🧾 Cuenta</h2>
+                <p style="color: #666;">Mesa ${order.mesa || 'Para llevar'} - Pedido #${order.id}</p>
+                <p style="color: #666; font-size: 14px;">${new Date(order.fecha).toLocaleString('es-ES')}</p>
+            </div>
+
+            <div style="border-top: 2px dashed #ddd; padding-top: 20px; margin-bottom: 20px;">
+                ${order.items.map(item => `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>${item.cantidad}x ${item.nombre}</span>
+                        <span>$${(item.precio * item.cantidad).toLocaleString()}</span>
+                    </div>
+                `).join('')}
+            </div>
+
+            <div style="border-top: 2px solid #333; padding-top: 15px; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold;">
+                    <span>TOTAL:</span>
+                    <span>$${total.toLocaleString()}</span>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button onclick="pedidosManager.procesarPago('${order.id}', 'efectivo')" style="
+                    padding: 12px 20px;
+                    background: #4caf50;
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-weight: bold;
+                ">💰 Pagar Efectivo</button>
+                
+                <button onclick="pedidosManager.procesarPago('${order.id}', 'tarjeta')" style="
+                    padding: 12px 20px;
+                    background: #2196f3;
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-weight: bold;
+                ">💳 Pagar Tarjeta</button>
+                
+                <button onclick="this.closest('.cuenta-modal').remove()" style="
+                    padding: 12px 20px;
+                    background: #666;
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    cursor: pointer;
+                ">Cancelar</button>
+            </div>
+        `;
+
+        modal.appendChild(modalContent);
+        document.body.appendChild(modal);
+
+        // Cerrar modal al hacer clic fuera
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+    }
+
+    // Procesar pago
+    procesarPago(orderId, metodoPago) {
+        try {
+            const orders = this.db.getOrders();
+            const order = orders.find(o => o.id == orderId);
+            
+            if (!order) {
+                this.showNotification('Pedido no encontrado', 'error');
+                return;
+            }
+
+            const total = order.items.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+
+            // Actualizar estado del pedido
+            order.estado = 'pagado';
+            order.fechaPago = new Date().toISOString();
+            order.metodoPago = metodoPago;
+            order.totalPagado = total;
+
+            // Guardar el pedido actualizado
+            this.db.saveOrder(order);
+
+            // Crear registro de venta
+            const sale = {
+                id: Date.now(),
+                fecha: new Date().toISOString(),
+                items: order.items,
+                total: total,
+                metodoPago: metodoPago,
+                mesa: order.mesa,
+                pedidoId: order.id,
+                cajero: localStorage.getItem('currentUser') || 'Sistema'
+            };
+
+            // Guardar la venta
+            this.db.saveSale(sale);
+
+            // Si tiene mesa, liberarla
+            if (order.mesa) {
+                const tables = this.db.getTables();
+                const table = tables.find(t => t.numero == order.mesa);
+                if (table) {
+                    table.estado = 'libre';
+                    table.clienteActual = null;
+                    table.pedidoActual = null;
+                    table.horaLiberacion = new Date().toISOString();
+                    this.db.saveTable(table);
+                }
+            }
+
+            // Cerrar modal de cuenta
+            const modal = document.querySelector('.cuenta-modal');
+            if (modal) {
+                modal.remove();
+            }
+
+            this.loadOrders();
+            this.showNotification(`Pago procesado exitosamente - $${total.toLocaleString()}`, 'success');
+
+        } catch (error) {
+            console.error('Error al procesar pago:', error);
+            this.showNotification('Error al procesar el pago', 'error');
+        }
     }
 }
 

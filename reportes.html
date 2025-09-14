@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reportes y Analíticas - Crêpes & Kaffee</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/reportes.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2 class="sidebar-title">Crêpes & Kaffee</h2>
+                <p class="sidebar-subtitle">Sistema POS</p>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <div class="nav-item">
+                    <a href="dashboard.html" class="nav-link">
+                        <i class="fas fa-home"></i>
+                        Dashboard
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="ventas.html" class="nav-link">
+                        <i class="fas fa-cash-register"></i>
+                        Ventas
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="pedidos.html" class="nav-link">
+                        <i class="fas fa-clipboard-list"></i>
+                        Pedidos
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="mesas.html" class="nav-link">
+                        <i class="fas fa-chair"></i>
+                        Mesas
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="reportes.html" class="nav-link active">
+                        <i class="fas fa-chart-line"></i>
+                        Reportes
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="caja.html" class="nav-link">
+                        <i class="fas fa-cash-register"></i>
+                        Caja
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="configuracion.html" class="nav-link">
+                        <i class="fas fa-cog"></i>
+                        Configuración
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="login.html" class="nav-link" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i>
+                        Cerrar Sesión
+                    </a>
+                </div>
+            </nav>
+        </aside>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="page-header">
+                <div class="page-title-section">
+                    <h1 class="page-title">📊 Reportes y Analíticas Avanzadas</h1>
+                    <p class="page-subtitle">Análisis detallado de ventas, costos y rentabilidad</p>
+                </div>
+                <div class="page-actions">
+                    <button id="refreshReportsBtn" class="btn btn-secondary">
+                        <i class="fas fa-sync"></i>
+                        Actualizar
+                    </button>
+                    <button class="btn btn-primary export-btn" data-format="print">
+                        <i class="fas fa-print"></i>
+                        Imprimir
+                    </button>
+                </div>
+            </header>
+            
+            <div class="page-content" id="reportsContainer">
+                <!-- Filtros de Período -->
+                <div class="filters-section">
+                    <div class="filter-group">
+                        <label>Período de análisis:</label>
+                        <div class="period-buttons">
+                            <button class="period-btn" data-period="today">Hoy</button>
+                            <button class="period-btn" data-period="week">Semana</button>
+                            <button class="period-btn active" data-period="month">Mes</button>
+                            <button class="period-btn" data-period="year">Año</button>
+                            <button id="customRangeBtn" class="period-btn custom">
+                                <i class="fas fa-calendar"></i>
+                                Personalizado
+                            </button>
+                        </div>
+                    </div>
+                    <div class="export-group">
+                        <label>Exportar:</label>
+                        <button class="btn btn-outline export-btn" data-format="csv">
+                            <i class="fas fa-file-csv"></i>
+                            CSV
+                        </button>
+                        <button class="btn btn-outline export-btn" data-format="json">
+                            <i class="fas fa-file-code"></i>
+                            JSON
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Métricas Generales -->
+                <div class="metrics-overview">
+                    <div class="metric-card">
+                        <div class="metric-icon">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <div class="metric-content">
+                            <div class="metric-label">Total Ventas</div>
+                            <div class="metric-value" id="totalSalesCard">$0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-icon profit">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="metric-content">
+                            <div class="metric-label">Ganancia Total</div>
+                            <div class="metric-value" id="totalProfitCard">$0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-icon margin">
+                            <i class="fas fa-percentage"></i>
+                        </div>
+                        <div class="metric-content">
+                            <div class="metric-label">Margen de Ganancia</div>
+                            <div class="metric-value" id="profitMarginCard">0%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-icon cost">
+                            <i class="fas fa-coins"></i>
+                        </div>
+                        <div class="metric-content">
+                            <div class="metric-label">Total Costos</div>
+                            <div class="metric-value" id="totalCostCard">$0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-icon transactions">
+                            <i class="fas fa-receipt"></i>
+                        </div>
+                        <div class="metric-content">
+                            <div class="metric-label">Transacciones</div>
+                            <div class="metric-value" id="transactionsCard">0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-icon ticket">
+                            <i class="fas fa-ticket-alt"></i>
+                        </div>
+                        <div class="metric-content">
+                            <div class="metric-label">Ticket Promedio</div>
+                            <div class="metric-value" id="avgTicketCard">$0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráficos y Análisis -->
+                <div class="reports-grid">
+                    <!-- Tendencia de Ventas -->
+                    <div class="report-card full-width">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-chart-line"></i>
+                                Tendencia de Ventas
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="salesTrendChart" class="chart-container"></div>
+                        </div>
+                    </div>
+
+                    <!-- Productos Más Vendidos -->
+                    <div class="report-card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-trophy"></i>
+                                Top Productos
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Producto</th>
+                                            <th>Vendidos</th>
+                                            <th>Ingresos</th>
+                                            <th>Costos</th>
+                                            <th>Ganancia</th>
+                                            <th>Margen</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="topProductsTableBody">
+                                        <!-- Se llena dinámicamente -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Análisis por Categorías -->
+                    <div class="report-card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-chart-pie"></i>
+                                Ventas por Categoría
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="categoryChart" class="chart-container"></div>
+                        </div>
+                    </div>
+
+                    <!-- Métodos de Pago -->
+                    <div class="report-card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-credit-card"></i>
+                                Métodos de Pago
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="paymentMethodChart" class="chart-container"></div>
+                        </div>
+                    </div>
+
+                    <!-- Rendimiento de Cajeros -->
+                    <div class="report-card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-users"></i>
+                                Rendimiento por Cajero
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Cajero</th>
+                                            <th>Sesiones</th>
+                                            <th>Ventas</th>
+                                            <th>Promedio/Sesión</th>
+                                            <th>Tiempo Avg</th>
+                                            <th>Diferencias</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="cashierPerformanceTableBody">
+                                        <!-- Se llena dinámicamente -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Análisis de Rentabilidad -->
+                    <div class="report-card full-width">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-calculator"></i>
+                                Análisis de Rentabilidad por Producto
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Producto</th>
+                                            <th>Costo Total</th>
+                                            <th>Ingresos</th>
+                                            <th>Ganancia</th>
+                                            <th>Margen %</th>
+                                            <th>ROI %</th>
+                                            <th>Unidades</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="profitabilityTableBody">
+                                        <!-- Se llena dinámicamente -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Insights y Recomendaciones -->
+                <div class="insights-section">
+                    <div class="insights-card">
+                        <div class="insights-header">
+                            <h3>
+                                <i class="fas fa-lightbulb"></i>
+                                Insights y Recomendaciones
+                            </h3>
+                        </div>
+                        <div class="insights-content" id="insightsContent">
+                            <div class="insight-item">
+                                <i class="fas fa-info-circle"></i>
+                                <span>Los insights se generarán automáticamente basados en los datos de ventas.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/database.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/auth-guard.js"></script>
+    <script src="assets/js/reportes.js"></script>
+    
+    <script>
+        function logout() {
+            authGuard.handleLogout();
+        }
+    </script>
+</body>
+</html>

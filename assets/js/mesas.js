@@ -1070,93 +1070,101 @@ class MesasManager {
     }
 
     processPayment(tableNumber, orderId) {
-        const modal = document.querySelector('.payment-modal');
-        const paymentMethodSelect = modal.querySelector('#paymentMethod');
-        const receivedInput = modal.querySelector('#receivedAmount');
-        const cashPart = modal.querySelector('#cashPart');
-        const cardPart = modal.querySelector('#cardPart');
-
-        const paymentMethod = paymentMethodSelect.value;
-        if (!paymentMethod) {
-            this.showNotification('Selecciona un método de pago', 'warning');
-            return;
-        }
-
-        const order = this.getTableOrder(tableNumber);
-        if (!order) {
-            this.showNotification('No se encontró el pedido', 'error');
-            return;
-        }
-
-        let paymentData = {
-            method: paymentMethod,
-            total: order.total
-        };
-
-        // Validaciones específicas por método de pago
-        if (paymentMethod === 'efectivo') {
-            const received = parseFloat(receivedInput.value) || 0;
-            if (received < order.total) {
-                this.showNotification('El dinero recibido es insuficiente', 'error');
-                return;
-            }
-            paymentData.received = received;
-            paymentData.change = received - order.total;
-        } else if (paymentMethod === 'mixto') {
-            const cash = parseFloat(cashPart.value) || 0;
-            const card = parseFloat(cardPart.value) || 0;
-            const total = cash + card;
-            
-            if (total < order.total) {
-                this.showNotification('El total del pago mixto es insuficiente', 'error');
-                return;
-            } else if (total > order.total) {
-                this.showNotification('El total del pago mixto excede el monto a pagar', 'error');
-                return;
-            }
-            
-            paymentData.cashAmount = cash;
-            paymentData.cardAmount = card;
-        }
-
         try {
+            const modal = document.querySelector('.payment-modal');
+            if (!modal) {
+                this.showNotification('Modal de pago no encontrado', 'error');
+                return;
+            }
+
+            const paymentMethodSelect = modal.querySelector('#paymentMethod');
+            const receivedInput = modal.querySelector('#receivedAmount');
+            const cashPart = modal.querySelector('#cashPart');
+            const cardPart = modal.querySelector('#cardPart');
+
+            const paymentMethod = paymentMethodSelect?.value;
+            if (!paymentMethod) {
+                this.showNotification('Selecciona un método de pago', 'warning');
+                return;
+            }
+
+            const order = this.getTableOrder(tableNumber);
+            if (!order) {
+                this.showNotification('No se encontró el pedido', 'error');
+                return;
+            }
+
+            // Calcular total si no existe
+            if (!order.total) {
+                order.total = order.items.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+            }
+
+            let paymentData = {
+                method: paymentMethod,
+                total: order.total
+            };
+
+            // Validaciones específicas por método de pago
+            if (paymentMethod === 'efectivo') {
+                const received = parseFloat(receivedInput?.value) || 0;
+                if (received < order.total) {
+                    this.showNotification('El dinero recibido es insuficiente', 'error');
+                    return;
+                }
+                paymentData.received = received;
+                paymentData.change = received - order.total;
+            } else if (paymentMethod === 'mixto') {
+                const cash = parseFloat(cashPart?.value) || 0;
+                const card = parseFloat(cardPart?.value) || 0;
+                const total = cash + card;
+                
+                if (total < order.total) {
+                    this.showNotification('El total del pago mixto es insuficiente', 'error');
+                    return;
+                } else if (Math.abs(total - order.total) > 0.01) { // Tolerancia para decimales
+                    this.showNotification('El total del pago mixto debe ser igual al monto a pagar', 'error');
+                    return;
+                }
+                
+                paymentData.cashAmount = cash;
+                paymentData.cardAmount = card;
+            }
+
             // Actualizar pedido
             order.estado = 'pagado';
             order.metodoPago = paymentMethod;
             order.fechaPago = new Date().toISOString();
             order.paymentData = paymentData;
 
-            // Guardar en base de datos
-            this.db.updateOrder(order.id, order);
+            // Guardar pedido actualizado
+            this.db.saveOrder(order);
 
-            // Agregar a ventas si no existe
-            const sales = this.db.getSales();
-            const existingSale = sales.find(sale => sale.orderId === order.id);
+            // Crear registro de venta
+            const sale = {
+                id: Date.now(),
+                orderId: order.id,
+                mesa: order.mesa,
+                items: order.items,
+                total: order.total,
+                metodoPago: paymentMethod,
+                fecha: new Date().toISOString(),
+                fechaFormateada: new Date().toLocaleDateString('es-ES'),
+                hora: new Date().toLocaleTimeString('es-ES'),
+                cajero: localStorage.getItem('currentUser') || 'Sistema',
+                paymentData: paymentData
+            };
             
-            if (!existingSale) {
-                const sale = {
-                    id: Date.now(),
-                    orderId: order.id,
-                    mesa: order.mesa,
-                    items: order.items,
-                    total: order.total,
-                    metodoPago: paymentMethod,
-                    fecha: new Date().toLocaleDateString(),
-                    hora: new Date().toLocaleTimeString(),
-                    timestamp: new Date().toISOString(),
-                    paymentData: paymentData
-                };
-                
-                this.db.addSale(sale);
-            }
+            this.db.saveSale(sale);
 
             // Actualizar estado de la mesa
             const tables = this.db.getTables();
             const table = tables.find(t => t.numero == tableNumber);
             if (table) {
                 table.estado = 'limpieza';
-                table.currentOrder = null;
-                this.db.updateTable(table.id, table);
+                table.clienteActual = null;
+                table.pedidoActual = null;
+                table.horaLiberacion = new Date().toISOString();
+                this.db.saveTable(table);
             }
 
             // Cerrar modal
@@ -1167,14 +1175,20 @@ class MesasManager {
             this.updateStats();
             
             // Mostrar notificación de éxito
-            this.showNotification(`Pago procesado exitosamente - Mesa ${tableNumber}`, 'success');
+            let successMessage = `Pago procesado exitosamente - Mesa ${tableNumber} - $${order.total.toLocaleString()}`;
+            if (paymentMethod === 'efectivo' && paymentData.change > 0) {
+                successMessage += ` (Cambio: $${paymentData.change.toLocaleString()})`;
+            }
+            this.showNotification(successMessage, 'success');
 
-            // Mostrar resumen del pago
-            this.showPaymentSummary(order, paymentData);
+            // Mostrar resumen del pago si existe la función
+            if (typeof this.showPaymentSummary === 'function') {
+                this.showPaymentSummary(order, paymentData);
+            }
 
         } catch (error) {
             console.error('Error al procesar pago:', error);
-            this.showNotification('Error al procesar el pago', 'error');
+            this.showNotification(`Error al procesar el pago: ${error.message}`, 'error');
         }
     }
 
