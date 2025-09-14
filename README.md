@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # 🥞 Crêpes & Kaffee - Sistema POS
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
@@ -303,4 +302,3 @@ Desarrollado con ❤️ para **Crêpes & Kaffee**
 **© 2025 Crêpes & Kaffee. Todos los derechos reservados.**
 =======
 # Crepes-Kaffee
->>>>>>> 7815b466cb495633e098138f0407202d20648c95
