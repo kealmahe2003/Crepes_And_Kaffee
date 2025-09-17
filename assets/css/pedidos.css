@@ -270,6 +270,72 @@
     background: #c82333;
 }
 
+/* Botones de Acción Específicos */
+.action-btn {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    text-decoration: none;
+    color: white;
+    min-width: 90px;
+}
+
+.action-btn.view {
+    background: #2196f3;
+}
+
+.action-btn.view:hover {
+    background: #1976d2;
+}
+
+.action-btn.edit {
+    background: #ff9800;
+}
+
+.action-btn.edit:hover {
+    background: #f57c00;
+}
+
+.action-btn.cancel {
+    background: #f44336;
+}
+
+.action-btn.cancel:hover {
+    background: #d32f2f;
+}
+
+.action-btn.ready-all {
+    background: #4caf50;
+}
+
+.action-btn.ready-all:hover {
+    background: #388e3c;
+}
+
+.action-btn.deliver {
+    background: #8bc34a;
+}
+
+.action-btn.deliver:hover {
+    background: #689f38;
+}
+
+.action-btn.payment {
+    background: #9c27b0;
+}
+
+.action-btn.payment:hover {
+    background: #7b1fa2;
+}
+
 /* Estado vacío */
 .no-orders {
     grid-column: 1 / -1;

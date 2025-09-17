@@ -18,17 +18,29 @@ class SalesManager {
     }
 
     init() {
-        this.loadProducts();
-        this.setupEventListeners();
-        this.setupNotifications();
-        this.updateCartDisplay();
-        this.loadTables();
-        this.initializeOrderType();
-        this.checkUrlParams();
-        
-        window.addEventListener('focus', () => {
+        try {
+            // Verificar que tenemos acceso a auth para validación de caja
+            if (window.auth) {
+                console.log('[SalesManager] Auth available, cash session active:', window.auth.isCashSessionActive());
+            }
+
+            this.loadProducts();
+            this.setupEventListeners();
+            this.setupNotifications();
+            this.updateCartDisplay();
             this.loadTables();
-        });
+            this.initializeOrderType();
+            this.checkUrlParams();
+            
+            window.addEventListener('focus', () => {
+                this.loadTables();
+            });
+            
+            console.log('[SalesManager] Initialization completed successfully');
+        } catch (error) {
+            console.error('[SalesManager] Error during initialization:', error);
+            this.showNotification('Error al inicializar la página de ventas: ' + error.message, 'error');
+        }
     }
 
     checkUrlParams() {
@@ -101,15 +113,33 @@ class SalesManager {
     }
 
     loadProducts() {
-        const products = this.db.getProducts().filter(p => p.active !== false);
-        const categories = this.db.getCategories();
-        
-        // Comentado para producción
-        // console.log('Productos cargados:', products);
-        // console.log('Categorías encontradas:', categories);
-        
-        this.renderCategories(categories);
-        this.renderProducts(products);
+        try {
+            // Verificar que la base de datos esté disponible
+            if (!this.db) {
+                console.error('Database not initialized');
+                this.showNotification('Error: Base de datos no disponible', 'error');
+                return;
+            }
+
+            const products = this.db.getProducts().filter(p => p.active !== false);
+            const categories = this.db.getCategories();
+            
+            // Verificar que hay productos
+            if (!products || products.length === 0) {
+                console.warn('No products found');
+                this.showNotification('No hay productos disponibles', 'warning');
+            }
+            
+            // Comentado para producción
+            // console.log('Productos cargados:', products);
+            // console.log('Categorías encontradas:', categories);
+            
+            this.renderCategories(categories);
+            this.renderProducts(products);
+        } catch (error) {
+            console.error('Error loading products:', error);
+            this.showNotification('Error al cargar productos: ' + error.message, 'error');
+        }
     }
 
     renderCategories(categories) {
@@ -297,17 +327,29 @@ class SalesManager {
             });
         }
 
+        console.log('addToCart - Carrito después de agregar:', this.cart);
+        console.log('addToCart - Total calculado:', this.cart.reduce((sum, item) => sum + item.subtotal, 0));
+        
         this.updateCartDisplay();
         this.showNotification(`${product.nombre || product.name} agregado al carrito`, 'success');
     }
 
     removeFromCart(productId) {
+        console.log('removeFromCart - Eliminando producto:', productId);
+        console.log('removeFromCart - Carrito antes:', this.cart);
+        
         this.cart = this.cart.filter(item => item.product.id !== productId);
+        
+        console.log('removeFromCart - Carrito después:', this.cart);
+        console.log('removeFromCart - Total calculado:', this.cart.reduce((sum, item) => sum + item.subtotal, 0));
+        
         this.updateCartDisplay();
         this.showNotification('Producto eliminado del carrito', 'info');
     }
 
     updateQuantity(productId, newQuantity) {
+        console.log('updateQuantity - Producto:', productId, 'Nueva cantidad:', newQuantity);
+        
         const item = this.cart.find(item => item.product.id === productId);
         if (item) {
             if (newQuantity <= 0) {
@@ -315,6 +357,10 @@ class SalesManager {
             } else {
                 item.quantity = newQuantity;
                 item.subtotal = item.quantity * (item.product.precio || item.product.price);
+                
+                console.log('updateQuantity - Item actualizado:', item);
+                console.log('updateQuantity - Total calculado:', this.cart.reduce((sum, item) => sum + item.subtotal, 0));
+                
                 this.updateCartDisplay();
             }
         }
@@ -370,7 +416,22 @@ class SalesManager {
         }
 
         if (sendOrderBtn) {
-            sendOrderBtn.disabled = this.cart.length === 0;
+            const hasItems = this.cart.length > 0;
+            const cashOpen = window.auth && window.auth.isCashSessionActive();
+            
+            sendOrderBtn.disabled = !hasItems || !cashOpen;
+            
+            // Actualizar texto del botón según el estado
+            if (!cashOpen) {
+                sendOrderBtn.innerHTML = '<i class="fas fa-lock"></i> Caja Cerrada';
+                sendOrderBtn.style.opacity = '0.5';
+            } else if (!hasItems) {
+                sendOrderBtn.innerHTML = '<i class="fas fa-check"></i> Confirmar Orden';
+                sendOrderBtn.style.opacity = '0.5';
+            } else {
+                sendOrderBtn.innerHTML = '<i class="fas fa-check"></i> Confirmar Orden';
+                sendOrderBtn.style.opacity = '1';
+            }
         }
     }
 
@@ -439,6 +500,16 @@ class SalesManager {
     }
 
     sendOrder() {
+        // Verificar que la caja esté abierta antes de permitir crear pedidos
+        if (!window.auth || !window.auth.isCashSessionActive()) {
+            if (window.auth && window.auth.showCashClosedNotification) {
+                window.auth.showCashClosedNotification('registrar pedidos');
+            } else {
+                this.showNotification('La caja debe estar abierta para registrar pedidos', 'error');
+            }
+            return;
+        }
+
         if (!this.validateOrderForSending()) {
             return;
         }
@@ -463,16 +534,21 @@ class SalesManager {
                 hora: new Date().toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'})
             };
 
-            // Guardar el pedido
-            this.db.saveOrder(order);
+            // Guardar el pedido (puede retornar un nuevo pedido si se está actualizando)
+            const savedOrder = this.db.saveOrder(order);
+            
+            // Si se retornó un pedido diferente (actualización con ID nuevo), usar ese
+            const finalOrder = savedOrder.id !== order.id ? savedOrder : order;
+            
+            console.log('[VentasManager] Pedido guardado:', finalOrder);
 
             // Actualizar mesa si es dine-in
-            if (order.mesa && this.currentOrder.type === 'dine-in') {
+            if (finalOrder.mesa && this.currentOrder.type === 'dine-in') {
                 const tables = this.db.getTables();
-                const table = tables.find(t => t.numero == order.mesa);
+                const table = tables.find(t => t.numero == finalOrder.mesa);
                 if (table) {
                     table.estado = 'ocupada';
-                    table.pedidoId = order.id;
+                    table.pedidoId = finalOrder.id; // Usar el ID del pedido final
                     table.ultimaActividad = new Date().toISOString();
                     this.db.updateTable(table.id, table);
                     this.loadTables(); // Recargar mesas disponibles
@@ -480,8 +556,8 @@ class SalesManager {
             }
 
             this.clearOrderForm();
-            this.showNotification(`Pedido #${order.id} enviado exitosamente`, 'success');
-            this.showOrderDetailsModal(order);
+            this.showNotification(`Pedido #${finalOrder.id} enviado exitosamente`, 'success');
+            this.showOrderDetailsModal(finalOrder);
 
         } catch (error) {
             console.error('Error al enviar el pedido:', error);
@@ -534,106 +610,134 @@ class SalesManager {
         this.removeEditingMode();
     }
 
+    removeEditingMode() {
+        // Restaurar botón original si está en modo de edición
+        const confirmBtn = document.getElementById('confirmOrderBtn');
+        if (confirmBtn) {
+            confirmBtn.innerHTML = '<i class="fas fa-check"></i> Confirmar Orden';
+            confirmBtn.onclick = () => this.sendOrder();
+        }
+        
+        // Limpiar parámetros de URL si existen
+        const url = new URL(window.location);
+        url.searchParams.delete('editOrder');
+        window.history.replaceState({}, document.title, url.toString());
+        
+        console.log('removeEditingMode - Modo de edición limpiado');
+    }
+
     loadOrderForEditing(orderId) {
         try {
-            // Convertir orderId a número para comparación consistente
-            const orderIdToLoad = parseInt(orderId);
-            
-            console.log('loadOrderForEditing - ID a cargar:', orderIdToLoad);
-            
+            console.log('=== CARGANDO PEDIDO PARA EDICIÓN ===');
+            const orderIdNumber = parseInt(orderId);
+            console.log('ID a cargar:', orderIdNumber);
+
+            // Buscar el pedido
             const orders = this.db.getOrders();
-            console.log('loadOrderForEditing - Total pedidos en DB:', orders.length);
-            console.log('loadOrderForEditing - IDs disponibles:', orders.map(o => ({id: o.id, tipo: typeof o.id})));
-            
-            const order = orders.find(o => parseInt(o.id) === orderIdToLoad);
+            const order = orders.find(o => parseInt(o.id) === orderIdNumber);
             
             if (!order) {
                 this.showNotification('Pedido no encontrado para editar', 'error');
-                console.error('loadOrderForEditing - Pedido no encontrado con ID:', orderIdToLoad);
                 return;
             }
 
-            console.log('loadOrderForEditing - Pedido encontrado:', order);
+            console.log('Pedido encontrado:', order);
 
-            // Verificar si el pedido se puede editar
-            if (['pagado', 'cancelado'].includes(order.estado)) {
-                this.showNotification('No se puede editar un pedido pagado o cancelado', 'error');
+            // Verificar si se puede editar
+            const nonEditableStates = ['pagado', 'cancelado', 'entregado'];
+            if (nonEditableStates.includes(order.estado)) {
+                this.showNotification(`No se puede editar un pedido ${order.estado}`, 'error');
                 return;
+            }
+
+            // Advertencia para items en preparación
+            const itemsInPreparation = order.items.filter(item => item.estado === 'preparando');
+            if (itemsInPreparation.length > 0) {
+                const confirmEdit = confirm(
+                    `Atención: Este pedido tiene ${itemsInPreparation.length} item(s) en preparación.\n` +
+                    '¿Está seguro de que desea editarlo?'
+                );
+                if (!confirmEdit) return;
             }
 
             // Limpiar carrito actual
             this.cart = [];
             
-            // Cargar items del pedido al carrito
-            order.items.forEach(item => {
-                const products = this.db.getProducts();
-                // Buscar producto por ID o por nombre si no se encuentra por ID
-                let product = products.find(p => p.id === item.productId);
-                
-                if (!product) {
-                    // Intentar buscar por nombre como fallback
-                    product = products.find(p => 
-                        (p.nombre || p.name) === (item.productName || item.nombre)
-                    );
-                }
-                
-                if (product) {
-                    // Agregar al carrito con la cantidad correcta
-                    const quantity = item.quantity || item.cantidad || 1;
-                    const price = product.precio || product.price || 0;
-                    
-                    this.cart.push({
-                        product: product,
-                        quantity: quantity,
-                        subtotal: quantity * price
-                    });
-                } else {
-                    console.warn('Producto no encontrado:', {
-                        productId: item.productId, 
-                        productName: item.productName || item.nombre
-                    });
-                    // Crear producto temporal para mantener el item
-                    const tempProduct = {
-                        id: item.productId,
-                        nombre: item.productName || item.nombre || 'Producto no encontrado',
-                        precio: item.unitPrice || item.precio || 0,
-                        categoria: 'Sin categoría'
-                    };
-                    
-                    this.cart.push({
-                        product: tempProduct,
-                        quantity: item.quantity || item.cantidad || 1,
-                        subtotal: item.subtotal || 0
-                    });
-                }
-            });
+            // Cargar items al carrito
+            this.loadOrderItemsToCart(order.items);
 
-            // Consolidar items duplicados en el carrito
-            this.consolidateCart();
-
-            // Configurar mesa y tipo de pedido
+            // Configurar pedido actual
             this.currentOrder.table = order.mesa;
             this.currentOrder.type = 'dine-in';
-            this.currentOrder.total = order.total || this.cart.reduce((sum, item) => sum + item.subtotal, 0);
+            this.currentOrder.total = this.cart.reduce((sum, item) => sum + item.subtotal, 0);
             
             // Actualizar interfaz
             this.updateOrderTypeSelection();
             this.selectTable(order.mesa);
             this.updateCartDisplay();
             
-            // Cambiar el texto del botón para indicar que es una edición
-            const confirmBtn = document.getElementById('confirmOrderBtn');
-            if (confirmBtn) {
-                confirmBtn.innerHTML = '<i class="fas fa-save"></i> Actualizar Pedido';
-                confirmBtn.onclick = () => this.updateOrder(orderIdToLoad);
-            }
+            // Cambiar botón a modo actualización
+            this.setUpdateMode(orderIdNumber);
             
-            // Mostrar información de que se está editando
-            this.showNotification(`Editando pedido #${orderIdToLoad} - Mesa ${order.mesa}`, 'info');
+            this.showNotification(`Editando pedido #${orderIdNumber} - Mesa ${order.mesa}`, 'info');
+            console.log('✅ Pedido cargado para edición exitosamente');
 
         } catch (error) {
-            console.error('Error al cargar pedido para edición:', error);
+            console.error('Error cargando pedido para edición:', error);
             this.showNotification(`Error al cargar pedido: ${error.message}`, 'error');
+        }
+    }
+
+    loadOrderItemsToCart(items) {
+        const products = this.db.getProducts();
+        
+        items.forEach(item => {
+            // Buscar producto por ID o nombre
+            let product = products.find(p => p.id === item.productId);
+            
+            if (!product) {
+                product = products.find(p => 
+                    (p.nombre || p.name) === (item.productName || item.nombre)
+                );
+            }
+            
+            if (product) {
+                // Producto encontrado - usar datos actuales del producto
+                const quantity = item.quantity || item.cantidad || 1;
+                const price = product.precio || product.price || 0;
+                
+                this.cart.push({
+                    product: product,
+                    quantity: quantity,
+                    subtotal: quantity * price
+                });
+            } else {
+                // Producto no encontrado - crear temporal
+                console.warn('Producto no encontrado, creando temporal:', item);
+                const tempProduct = {
+                    id: item.productId || `temp_${Date.now()}`,
+                    nombre: item.productName || item.nombre || 'Producto no encontrado',
+                    precio: item.unitPrice || item.precio || 0,
+                    categoria: 'Sin categoría'
+                };
+                
+                this.cart.push({
+                    product: tempProduct,
+                    quantity: item.quantity || item.cantidad || 1,
+                    subtotal: item.subtotal || 0
+                });
+            }
+        });
+
+        // Consolidar items duplicados
+        this.consolidateCart();
+    }
+
+    setUpdateMode(orderId) {
+        const confirmBtn = document.getElementById('confirmOrderBtn');
+        if (confirmBtn) {
+            confirmBtn.innerHTML = '<i class="fas fa-save"></i> Actualizar Pedido';
+            confirmBtn.onclick = () => this.updateOrder(orderId);
         }
     }
 
@@ -654,110 +758,257 @@ class SalesManager {
     }
 
     updateOrder(originalOrderId) {
-        // Función de debug temporal
-        console.log('=== DEBUG: Estado completo antes de actualizar ===');
-        console.log('localStorage pos_orders:', localStorage.getItem('pos_orders'));
-        const allOrders = this.db.getOrders();
-        console.log('Todos los pedidos:', allOrders);
-        console.log('Pedido a actualizar ID:', originalOrderId, 'tipo:', typeof originalOrderId);
-        console.log('Cart actual:', this.cart);
-        console.log('Current order:', this.currentOrder);
-        
+        // Validación de caja abierta
+        if (!window.auth || !window.auth.isCashSessionActive()) {
+            if (window.auth && window.auth.showCashClosedNotification) {
+                window.auth.showCashClosedNotification('actualizar pedidos');
+            } else {
+                this.showNotification('La caja debe estar abierta para actualizar pedidos', 'error');
+            }
+            return;
+        }
+
+        // Validación del pedido
         if (!this.validateOrderForSending()) {
             return;
         }
 
         try {
-            // Convertir originalOrderId a número para comparación consistente
-            const orderIdToUpdate = parseInt(originalOrderId);
-            
-            console.log('updateOrder - ID a actualizar:', orderIdToUpdate);
-            
-            // Obtener la orden original para mantener datos importantes
-            const orders = this.db.getOrders();
-            console.log('updateOrder - Total pedidos en DB:', orders.length);
-            console.log('updateOrder - IDs de pedidos:', orders.map(o => o.id));
-            
-            const originalOrder = orders.find(o => parseInt(o.id) === orderIdToUpdate);
-            
-            if (!originalOrder) {
-                console.error('updateOrder - Pedido no encontrado con ID:', orderIdToUpdate);
-                this.showNotification('Pedido no encontrado para actualizar', 'error');
+            console.log('=== INICIANDO ACTUALIZACIÓN DE PEDIDO ===');
+            console.log('ID del pedido a actualizar:', originalOrderId);
+
+            // 1. ELIMINAR PEDIDO ORIGINAL DE FORMA ATÓMICA
+            const success = this.deleteOrderById(originalOrderId);
+            if (!success) {
+                this.showNotification('Error: No se pudo eliminar el pedido original', 'error');
                 return;
             }
 
-            console.log('updateOrder - Pedido original encontrado:', originalOrder);
+            // 2. CREAR NUEVO PEDIDO CON LOS DATOS ACTUALES
+            const newOrderData = this.buildNewOrderData();
+            const newOrderId = this.saveNewOrder(newOrderData);
 
-            // Verificar si el pedido se puede editar
-            if (['pagado', 'cancelado'].includes(originalOrder.estado)) {
-                this.showNotification('No se puede editar un pedido pagado o cancelado', 'error');
-                return;
-            }
+            // 3. ACTUALIZAR ASIGNACIÓN DE MESA
+            this.updateTableAssignment(originalOrderId, newOrderId);
 
-            // Determinar el estado apropiado (mantener estado actual si está en proceso)
-            let nuevoEstado = originalOrder.estado;
+            // 4. LIMPIAR INTERFAZ Y NOTIFICAR
+            this.finishOrderUpdate(newOrderId);
 
-            // Crear orden actualizada manteniendo datos importantes del original
-            const updatedOrder = {
-                ...originalOrder, // Mantener todos los datos originales
-                id: orderIdToUpdate, // Asegurar ID como número
-                items: this.cart.map(item => ({
-                    productId: item.product.id,
-                    productName: item.product.nombre || item.product.name,
-                    nombre: item.product.nombre || item.product.name, // Compatibilidad
-                    quantity: item.quantity,
-                    cantidad: item.quantity, // Compatibilidad
-                    unitPrice: item.product.precio || item.product.price,
-                    precio: item.product.precio || item.product.price, // Compatibilidad
-                    subtotal: item.subtotal,
-                    estado: 'pendiente' // Solo los nuevos items empiezan pendientes
-                })),
-                total: this.currentOrder.total,
-                mesa: this.currentOrder.table,
-                tipo: this.getOrderTypeSpanish(this.currentOrder.type),
-                estado: nuevoEstado, // Mantener estado actual si no está terminado
-                fechaActualizacion: new Date().toISOString(),
-                horaActualizacion: new Date().toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'})
-            };
-
-            console.log('updateOrder - Pedido actualizado a guardar:', updatedOrder);
-
-            // Usar el método saveOrder que ya existe y funciona correctamente
-            const savedOrder = this.db.saveOrder(updatedOrder);
-            console.log('updateOrder - Resultado de saveOrder:', savedOrder);
-            
-            // Verificar que se guardó correctamente
-            const verifyOrders = this.db.getOrders();
-            const verifyOrder = verifyOrders.find(o => parseInt(o.id) === orderIdToUpdate);
-            console.log('updateOrder - Verificación - Pedido después de guardar:', verifyOrder);
-            console.log('=== DEBUG: Estado completo después de actualizar ===');
-            console.log('localStorage pos_orders después:', localStorage.getItem('pos_orders'));
-            console.log('Todos los pedidos después:', verifyOrders);
-            
-            // Actualizar la mesa si cambió
-            if (originalOrder.mesa !== updatedOrder.mesa) {
-                this.updateTableAssignment(originalOrder.mesa, updatedOrder.mesa, orderIdToUpdate);
-            }
-            
-            this.clearOrderForm();
-            
-            // Restaurar botón original
-            const confirmBtn = document.getElementById('confirmOrderBtn');
-            if (confirmBtn) {
-                confirmBtn.innerHTML = '<i class="fas fa-check"></i> Confirmar Orden';
-                confirmBtn.onclick = () => this.sendOrder();
-            }
-            
-            this.showNotification(`Pedido #${orderIdToUpdate} actualizado exitosamente`, 'success');
-            
-            // Redirigir de vuelta a mesas después de un momento con parámetro de actualización
-            setTimeout(() => {
-                window.location.href = 'mesas.html?updated=true';
-            }, 2000);
+            console.log('=== ACTUALIZACIÓN COMPLETADA EXITOSAMENTE ===');
 
         } catch (error) {
-            console.error('updateOrder - Error:', error);
-            this.showNotification(`Error al actualizar el pedido: ${error.message}`, 'error');
+            console.error('Error crítico en updateOrder:', error);
+            this.showNotification(`Error al actualizar pedido: ${error.message}`, 'error');
+        }
+    }
+
+    // Eliminar pedido por ID de forma atómica
+    deleteOrderById(orderId) {
+        try {
+            const orderIdNumber = parseInt(orderId);
+            const orders = JSON.parse(localStorage.getItem('pos_orders') || '[]');
+            
+            console.log('Eliminando pedido ID:', orderIdNumber);
+            console.log('Total pedidos antes:', orders.length);
+            
+            // Buscar el pedido original
+            const originalOrder = orders.find(o => parseInt(o.id) === orderIdNumber);
+            if (!originalOrder) {
+                console.error('Pedido no encontrado para eliminar:', orderIdNumber);
+                return false;
+            }
+
+            // Verificar si se puede editar
+            if (['pagado', 'cancelado'].includes(originalOrder.estado)) {
+                this.showNotification('No se puede editar un pedido pagado o cancelado', 'error');
+                return false;
+            }
+
+            // Filtrar (eliminar) el pedido
+            const filteredOrders = orders.filter(o => parseInt(o.id) !== orderIdNumber);
+            
+            console.log('Total pedidos después:', filteredOrders.length);
+            
+            // Guardar inmediatamente
+            localStorage.setItem('pos_orders', JSON.stringify(filteredOrders));
+            
+            // Verificar que se eliminó
+            const verification = JSON.parse(localStorage.getItem('pos_orders') || '[]');
+            const stillExists = verification.find(o => parseInt(o.id) === orderIdNumber);
+            
+            if (stillExists) {
+                console.error('FALLO: El pedido no se eliminó correctamente');
+                return false;
+            }
+
+            console.log('✅ Pedido eliminado exitosamente');
+            return true;
+
+        } catch (error) {
+            console.error('Error eliminando pedido:', error);
+            return false;
+        }
+    }
+
+    // Construir datos del nuevo pedido
+    buildNewOrderData() {
+        const newId = this.generateUniqueOrderId();
+        
+        const orderData = {
+            id: newId,
+            mesa: this.currentOrder.table || null,
+            tipo: this.getOrderTypeSpanish(this.currentOrder.type),
+            items: this.cart.map(item => ({
+                productId: item.product.id,
+                productName: item.product.nombre || item.product.name,
+                nombre: item.product.nombre || item.product.name,
+                quantity: item.quantity,
+                cantidad: item.quantity,
+                unitPrice: item.product.precio || item.product.price,
+                precio: item.product.precio || item.product.price,
+                subtotal: item.subtotal,
+                estado: 'pendiente'
+            })),
+            total: this.cart.reduce((sum, item) => sum + item.subtotal, 0),
+            estado: 'pendiente',
+            fecha: new Date().toISOString().split('T')[0],
+            hora: new Date().toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'}),
+            cliente: null,
+            // Marcas de actualización
+            esActualizacion: true,
+            fechaActualizacion: new Date().toISOString()
+        };
+
+        console.log('Nuevo pedido construido:', orderData);
+        return orderData;
+    }
+
+    // Generar ID único y simple
+    generateUniqueOrderId() {
+        const orders = JSON.parse(localStorage.getItem('pos_orders') || '[]');
+        const existingIds = orders.map(o => parseInt(o.id) || 0);
+        const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
+        const newId = maxId + 1;
+        
+        console.log('Generando nuevo ID:', newId);
+        return newId;
+    }
+
+    // Guardar nuevo pedido
+    saveNewOrder(orderData) {
+        try {
+            const orders = JSON.parse(localStorage.getItem('pos_orders') || '[]');
+            orders.push(orderData);
+            localStorage.setItem('pos_orders', JSON.stringify(orders));
+            
+            // Verificar que se guardó
+            const verification = JSON.parse(localStorage.getItem('pos_orders') || '[]');
+            const savedOrder = verification.find(o => parseInt(o.id) === orderData.id);
+            
+            if (!savedOrder) {
+                throw new Error('No se pudo verificar que el pedido se guardó');
+            }
+
+            console.log('✅ Nuevo pedido guardado con ID:', orderData.id);
+            
+            // Registrar en logs si está disponible
+            if (this.db.addOrderLog) {
+                this.db.addOrderLog(orderData.id, 'created_from_update', 
+                    `Pedido creado por actualización - Items: ${orderData.items.length}, Total: $${orderData.total}`);
+            }
+
+            return orderData.id;
+
+        } catch (error) {
+            console.error('Error guardando nuevo pedido:', error);
+            throw error;
+        }
+    }
+
+    // Actualizar asignación de mesa
+    updateTableAssignment(oldOrderId, newOrderId) {
+        try {
+            if (!this.currentOrder.table) return;
+
+            const tables = this.db.getTables();
+            const tableNumber = this.currentOrder.table;
+            const table = tables.find(t => t.numero === tableNumber);
+            
+            if (table && table.pedidoId && parseInt(table.pedidoId) === parseInt(oldOrderId)) {
+                table.pedidoId = newOrderId;
+                table.estado = 'ocupada';
+                localStorage.setItem('pos_tables', JSON.stringify(tables));
+                console.log('✅ Mesa actualizada con nuevo pedido ID:', newOrderId);
+            }
+
+        } catch (error) {
+            console.error('Error actualizando asignación de mesa:', error);
+        }
+    }
+
+    // Finalizar actualización y limpiar interfaz
+    finishOrderUpdate(newOrderId) {
+        // Limpiar formulario
+        this.clearOrderForm();
+        
+        // Restaurar botón original
+        const confirmBtn = document.getElementById('confirmOrderBtn');
+        if (confirmBtn) {
+            confirmBtn.innerHTML = '<i class="fas fa-check"></i> Confirmar Orden';
+            confirmBtn.onclick = () => this.sendOrder();
+        }
+        
+        // Notificar éxito
+        this.showNotification(`✅ Pedido actualizado exitosamente - Nuevo ID: #${newOrderId}`, 'success');
+        
+        // Notificar a otras pestañas
+        this.triggerStorageEvent();
+        
+        // Redirigir después de un momento
+        setTimeout(() => {
+            window.location.href = 'mesas.html?updated=true';
+        }, 2000);
+    }
+
+    // Disparar evento de storage para sincronizar pestañas
+    triggerStorageEvent() {
+        // Trigger storage event para sincronización
+        const event = new Event('storage');
+        event.key = 'pos_orders';
+        event.newValue = localStorage.getItem('pos_orders');
+        window.dispatchEvent(event);
+    }
+
+    updateTableAssignmentForNewOrder(oldTableNumber, newTableNumber, newOrderId) {
+        try {
+            const tables = this.db.getTables();
+            
+            // Liberar mesa anterior si cambió
+            if (oldTableNumber && oldTableNumber !== newTableNumber) {
+                const oldTable = tables.find(t => t.numero == oldTableNumber);
+                if (oldTable) {
+                    oldTable.estado = 'libre';
+                    oldTable.pedidoId = null;
+                    oldTable.ultimaActividad = new Date().toISOString();
+                    this.db.updateTable(oldTable.id, oldTable);
+                    console.log('updateTableAssignmentForNewOrder - Mesa anterior liberada:', oldTableNumber);
+                }
+            }
+            
+            // Asignar nueva mesa
+            if (newTableNumber) {
+                const newTable = tables.find(t => t.numero == newTableNumber);
+                if (newTable) {
+                    newTable.estado = 'ocupada';
+                    newTable.pedidoId = newOrderId;
+                    newTable.ultimaActividad = new Date().toISOString();
+                    this.db.updateTable(newTable.id, newTable);
+                    console.log('updateTableAssignmentForNewOrder - Nueva mesa asignada:', newTableNumber, 'con pedido:', newOrderId);
+                }
+            }
+            
+        } catch (error) {
+            console.error('updateTableAssignmentForNewOrder - Error:', error);
         }
     }
 

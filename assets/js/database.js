@@ -281,17 +281,85 @@ class Database {
         console.log('saveOrder - Total pedidos antes:', orders.length);
         console.log('saveOrder - Orders antes:', orders.map(o => ({id: o.id, mesa: o.mesa, total: o.total})));
         
+        let logAction = '';
+        let logDetails = '';
+        
         if (existingIndex >= 0) {
-            console.log('saveOrder - Actualizando pedido existente en índice:', existingIndex);
-            console.log('saveOrder - Pedido anterior:', orders[existingIndex]);
-            orders[existingIndex] = order;
-            console.log('saveOrder - Pedido después de reemplazo:', orders[existingIndex]);
+            console.log('saveOrder - Encontrado pedido existente en índice:', existingIndex);
+            
+            const previousOrder = orders[existingIndex];
+            console.log('saveOrder - Pedido anterior:', previousOrder);
+            
+            // Verificar si es solo un cambio de estado o una actualización de contenido
+            const isStatusChange = previousOrder.estado !== order.estado && 
+                                 JSON.stringify(previousOrder.items) === JSON.stringify(order.items) &&
+                                 previousOrder.total === order.total;
+            
+            if (isStatusChange) {
+                // Solo cambio de estado - actualizar directamente
+                console.log('saveOrder - Solo cambio de estado, actualizando directamente');
+                logAction = 'status_changed';
+                logDetails = `Estado cambiado de "${previousOrder.estado}" a "${order.estado}"`;
+                orders[existingIndex] = order;
+            } else {
+                // Actualización de contenido - cancelar anterior y crear nuevo
+                console.log('saveOrder - Actualización de contenido detectada - aplicando estrategia CANCELAR + CREAR NUEVO');
+                
+                // 1. Marcar el pedido anterior como cancelado
+                const cancelledOrder = { ...previousOrder };
+                cancelledOrder.estado = 'cancelado';
+                cancelledOrder.fechaCancelacion = new Date().toISOString();
+                cancelledOrder.motivoCancelacion = 'Actualizado - Reemplazado por nuevo pedido';
+                orders[existingIndex] = cancelledOrder;
+                
+                console.log('saveOrder - Pedido anterior marcado como cancelado:', cancelledOrder);
+                
+                // Si el pedido cancelado tenía una mesa, no la liberamos aquí porque 
+                // el nuevo pedido la va a usar. La mesa se quedará con el mismo número
+                // pero se actualizará con el nuevo pedido ID más adelante
+                
+                // 2. Crear un nuevo pedido con ID fresco
+                const newOrder = { ...order };
+                newOrder.id = Date.now(); // ID completamente nuevo
+                newOrder.timestamp = new Date().toISOString();
+                newOrder.hora = new Date().toLocaleTimeString('es-ES');
+                newOrder.pedidoAnteriorId = previousOrder.id; // Referencia al pedido cancelado
+                
+                // Agregar el nuevo pedido
+                orders.push(newOrder);
+                
+                console.log('saveOrder - Nuevo pedido creado con ID:', newOrder.id);
+                console.log('saveOrder - Nuevo pedido:', newOrder);
+                
+                // Logs para ambas acciones
+                this.addOrderLog(previousOrder.id, 'cancelled_for_update', `Pedido cancelado por actualización - Reemplazado por pedido #${newOrder.id}`);
+                
+                logAction = 'created_from_update';
+                logDetails = `Nuevo pedido creado reemplazando #${previousOrder.id} - Mesa: ${newOrder.mesa || 'N/A'}, Items: ${newOrder.items.length}, Total: $${newOrder.total}`;
+                
+                // Guardar y retornar el nuevo pedido
+                this.saveOrders(orders);
+                this.addOrderLog(newOrder.id, logAction, logDetails);
+                
+                console.log('saveOrder - localStorage después:', localStorage.getItem('pos_orders'));
+                console.log('saveOrder - Total pedidos después:', orders.length);
+                console.log('=== DEBUG saveOrder FIN - NUEVO PEDIDO CREADO ===');
+                
+                return newOrder; // Retornar el nuevo pedido
+            }
         } else {
             console.log('saveOrder - Agregando nuevo pedido');
+            logAction = 'created';
+            logDetails = `Nuevo pedido creado - Mesa: ${order.mesa || 'N/A'}, Items: ${order.items.length}, Total: $${order.total}`;
             orders.push(order);
         }
         
+        // Para casos normales (nuevo pedido o solo cambio de estado)
         this.saveOrders(orders);
+        
+        // Registrar el cambio en los logs
+        this.addOrderLog(order.id, logAction, logDetails);
+        
         console.log('saveOrder - localStorage después:', localStorage.getItem('pos_orders'));
         console.log('saveOrder - Total pedidos después:', orders.length);
         console.log('saveOrder - Orders después:', orders.map(o => ({id: o.id, mesa: o.mesa, total: o.total})));
@@ -1081,6 +1149,84 @@ class Database {
             cashierPerformance,
             trends: this.getDailySalesTrends(30)
         };
+    }
+    
+    // ===== SISTEMA DE LOGS DE CAMBIOS =====
+    
+    initializeOrderLogs() {
+        if (!localStorage.getItem('pos_order_logs')) {
+            localStorage.setItem('pos_order_logs', JSON.stringify([]));
+        }
+    }
+    
+    getOrderLogs() {
+        this.initializeOrderLogs();
+        return JSON.parse(localStorage.getItem('pos_order_logs')) || [];
+    }
+    
+    addOrderLog(orderId, action, details, userId = null) {
+        try {
+            const logs = this.getOrderLogs();
+            const currentUser = this.getCurrentUser();
+            
+            const logEntry = {
+                id: Date.now(),
+                orderId: orderId,
+                action: action, // 'created', 'updated', 'cancelled', 'status_changed', 'item_added', 'item_removed'
+                details: details,
+                timestamp: new Date().toISOString(),
+                userId: userId || (currentUser ? currentUser.id : null),
+                userName: userId ? this.getUserById(userId)?.name : (currentUser ? currentUser.name : 'Sistema'),
+                date: new Date().toLocaleDateString('es-ES'),
+                time: new Date().toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'})
+            };
+            
+            logs.push(logEntry);
+            
+            // Mantener solo los últimos 1000 logs para evitar usar demasiado espacio
+            if (logs.length > 1000) {
+                logs.splice(0, logs.length - 1000);
+            }
+            
+            localStorage.setItem('pos_order_logs', JSON.stringify(logs));
+            console.log('Log agregado:', logEntry);
+            
+        } catch (error) {
+            console.error('Error al agregar log:', error);
+        }
+    }
+    
+    getOrderLogsById(orderId) {
+        const logs = this.getOrderLogs();
+        return logs.filter(log => log.orderId == orderId).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    }
+    
+    clearOldLogs(daysToKeep = 30) {
+        try {
+            const logs = this.getOrderLogs();
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+            
+            const filteredLogs = logs.filter(log => new Date(log.timestamp) > cutoffDate);
+            localStorage.setItem('pos_order_logs', JSON.stringify(filteredLogs));
+            
+            console.log(`Logs limpiados. Eliminados: ${logs.length - filteredLogs.length}, Mantenidos: ${filteredLogs.length}`);
+        } catch (error) {
+            console.error('Error al limpiar logs:', error);
+        }
+    }
+    
+    getCurrentUser() {
+        const currentSession = localStorage.getItem('pos_current_user');
+        if (currentSession) {
+            try {
+                return JSON.parse(currentSession);
+            } catch (error) {
+                console.error('Error al obtener usuario actual:', error);
+                return null;
+            }
+        }
+        return null;
     }
     
     getPeriodLabel(period) {

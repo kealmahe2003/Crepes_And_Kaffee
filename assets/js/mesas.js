@@ -148,17 +148,32 @@ class MesasManager {
     }
 
     getTableOrder(tableNumber) {
+        console.log('[MesasManager] Buscando pedido para mesa:', tableNumber);
+        
         const orders = this.db.getOrders();
-        const tableOrders = orders.filter(order => 
-            order.mesa == tableNumber && 
-            ['pendiente', 'preparando', 'listo', 'entregado'].includes(order.estado) &&
-            order.estado !== 'pagado'
-        );
+        console.log('[MesasManager] Total de pedidos en DB:', orders.length);
+        
+        // Filtrar pedidos de la mesa que no estén pagados ni cancelados
+        const tableOrders = orders.filter(order => {
+            const isCorrectTable = order.mesa == tableNumber;
+            const isActiveOrder = !['pagado', 'cancelado'].includes(order.estado);
+            
+            if (order.mesa == tableNumber) {
+                console.log(`[MesasManager] Pedido ${order.id} mesa ${order.mesa} estado "${order.estado}" - es mesa correcta: ${isCorrectTable}, es activo: ${isActiveOrder}`);
+            }
+            
+            return isCorrectTable && isActiveOrder;
+        });
+        
+        console.log('[MesasManager] Pedidos filtrados para mesa', tableNumber, ':', tableOrders);
         
         // Retornar el pedido más reciente (ordenar por ID descendente)
-        return tableOrders.length > 0 
+        const result = tableOrders.length > 0 
             ? tableOrders.sort((a, b) => b.id - a.id)[0]
             : null;
+            
+        console.log('[MesasManager] Pedido seleccionado:', result);
+        return result;
     }
 
     getStatusClass(status) {
@@ -417,29 +432,35 @@ class MesasManager {
     }
 
     showBillModal(tableNumber) {
-        const order = this.getTableOrder(tableNumber);
-        if (!order) {
-            this.showNotification('No hay pedido para mostrar la cuenta', 'warning');
-            return;
-        }
+        console.log('[MesasManager] showBillModal llamado para mesa:', tableNumber);
+        
+        try {
+            const order = this.getTableOrder(tableNumber);
+            console.log('[MesasManager] Pedido encontrado:', order);
+            
+            if (!order) {
+                console.log('[MesasManager] No hay pedido para la mesa', tableNumber);
+                this.showNotification('No hay pedido para mostrar la cuenta', 'warning');
+                return;
+            }
 
-        const modal = document.createElement('div');
-        modal.className = 'bill-modal';
-        modal.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-        `;
+            const modal = document.createElement('div');
+            modal.className = 'bill-modal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 2000;
+            `;
 
-        const currentDate = new Date().toLocaleDateString('es-ES');
-        const currentTime = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+            const currentDate = new Date().toLocaleDateString('es-ES');
+            const currentTime = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 
         modal.innerHTML = `
             <div class="modal-content" style="
@@ -584,6 +605,11 @@ class MesasManager {
                 modal.remove();
             }
         });
+        
+        } catch (error) {
+            console.error('[MesasManager] Error en showBillModal:', error);
+            this.showNotification('Error al mostrar la cuenta', 'error');
+        }
     }
 
     printBill(tableNumber) {
@@ -973,7 +999,7 @@ class MesasManager {
                         font-weight: 500;
                         opacity: 0.5;
                     " disabled>
-                        Procesar Pago
+                        ${window.auth && window.auth.isCashSessionActive() ? 'Procesar Pago' : '<i class="fas fa-lock"></i> Caja Cerrada'}
                     </button>
                 </div>
             </div>
@@ -1006,9 +1032,17 @@ class MesasManager {
                 mixedFields.style.display = 'block';
             }
             
-            // Enable/disable process button
-            processBtn.disabled = !method;
-            processBtn.style.opacity = method ? '1' : '0.5';
+            // Enable/disable process button based on method AND cash session
+            const canProcess = method && window.auth && window.auth.isCashSessionActive();
+            processBtn.disabled = !canProcess;
+            processBtn.style.opacity = canProcess ? '1' : '0.5';
+            
+            // Actualizar texto del botón si la caja está cerrada
+            if (!window.auth || !window.auth.isCashSessionActive()) {
+                processBtn.innerHTML = '<i class="fas fa-lock"></i> Caja Cerrada';
+            } else {
+                processBtn.innerHTML = 'Procesar Pago';
+            }
         });
 
         // Cash calculation
@@ -1071,6 +1105,21 @@ class MesasManager {
 
     processPayment(tableNumber, orderId) {
         try {
+            // Verificar que la caja esté abierta antes de permitir procesar pagos
+            if (!window.auth || !window.auth.isCashSessionActive()) {
+                if (window.auth && window.auth.showCashClosedNotification) {
+                    window.auth.showCashClosedNotification('procesar pagos');
+                } else {
+                    this.showNotification('La caja debe estar abierta para procesar pagos', 'error');
+                }
+                // Cerrar modal si está abierto
+                const modal = document.querySelector('.payment-modal');
+                if (modal) {
+                    modal.remove();
+                }
+                return;
+            }
+
             const modal = document.querySelector('.payment-modal');
             if (!modal) {
                 this.showNotification('Modal de pago no encontrado', 'error');

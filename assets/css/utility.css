@@ -1,0 +1,72 @@
+/* Utility Pages Styles - Crêpes & Kaffee */
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #f8f9fa;
+    padding: 20px;
+    margin: 0;
+    color: #333;
+    line-height: 1.6;
+}
+
+h1 {
+    color: #6B9B7C;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #6B9B7C;
+}
+
+button {
+    background: #6B9B7C;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    margin: 5px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background: #4A7C59;
+}
+
+pre {
+    background: #f1f3f4;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #6B9B7C;
+    overflow-x: auto;
+    font-size: 14px;
+    margin-top: 20px;
+}
+
+#results, #output {
+    margin-top: 20px;
+}
+
+#results p {
+    padding: 8px 12px;
+    margin: 5px 0;
+    border-radius: 5px;
+    background: #e8f5e8;
+    border-left: 3px solid #6B9B7C;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.status-success {
+    color: #155724;
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+}
+
+.status-error {
+    color: #721c24;
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+}
