@@ -10,26 +10,26 @@ echo.
 :: Verificar si Python está disponible
 python --version >nul 2>&1
 if %errorlevel% equ 0 (
-    echo Python encontrado. Iniciando servidor en puerto 8000...
+    echo Python encontrado. Iniciando servidor en puerto 8020...
     echo.
-    echo Abre tu navegador y ve a: http://localhost:8000
+    echo Abre tu navegador y ve a: http://localhost:8020
     echo.
     echo Para detener el servidor, presiona Ctrl+C
     echo.
-    python -m http.server 8000
+    python -m http.server 8020
     goto :end
 )
 
 :: Verificar si Python3 está disponible
 python3 --version >nul 2>&1
 if %errorlevel% equ 0 (
-    echo Python3 encontrado. Iniciando servidor en puerto 8000...
+    echo Python3 encontrado. Iniciando servidor en puerto 8020...
     echo.
-    echo Abre tu navegador y ve a: http://localhost:8000
+    echo Abre tu navegador y ve a: http://localhost:8020
     echo.
     echo Para detener el servidor, presiona Ctrl+C
     echo.
-    python3 -m http.server 8000
+    python3 -m http.server 8020
     goto :end
 )
 

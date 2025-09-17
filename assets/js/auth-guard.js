@@ -23,17 +23,26 @@ class AuthGuard {
         document.addEventListener('DOMContentLoaded', () => {
             this.checkAuthentication();
             this.setupLogoutHandlers();
-            this.setupServerConnectionMonitoring();
+            // Comentado: no necesitamos monitoreo de servidor para sistema frontend-only
+            // this.setupServerConnectionMonitoring();
         });
         
-        // Verificar sesión cada 30 segundos
+        // Verificar sesión cada 15 segundos (más frecuente)
         setInterval(() => {
             this.validateSession();
-        }, 30000);
+        }, 15000);
         
         // Verificar cuando la página reciba el foco
         window.addEventListener('focus', () => {
             this.validateSession();
+        });
+        
+        // Verificar cuando cambia el localStorage (para sincronización entre pestañas)
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'pos_user' && !e.newValue) {
+                // Usuario fue eliminado del storage, forzar login
+                this.forceLogin('Sesión cerrada en otra pestaña');
+            }
         });
         
         this.initialized = true;
@@ -48,34 +57,55 @@ class AuthGuard {
         try {
             // Si estamos en la página de login, manejar de forma especial
             if (window.location.pathname.includes('login.html')) {
-                // Solo redirigir si hay un usuario válido Y si no estamos en proceso de login
+                // Solo redirigir si hay un usuario válido Y tiene caja abierta
                 if (this.auth.isLoggedIn() && this.auth.validateSession()) {
                     // Verificar si no hay un proceso de login en curso
                     const loginForm = document.getElementById('loginForm');
                     if (!loginForm || !document.activeElement || document.activeElement.tagName !== 'INPUT') {
-                        // Solo redirigir si no estamos en medio de un proceso de login
-                        console.log('[AuthGuard] Usuario ya logueado, redirigiendo al dashboard');
-                        this._redirecting = true;
-                        setTimeout(() => {
-                            window.location.href = 'dashboard.html';
-                        }, 100);
+                        // Verificar si ya tiene caja abierta o no necesita abrirla
+                        if (this.auth.isCashSessionOpen()) {
+                            console.log('[AuthGuard] Usuario logueado con caja abierta, redirigiendo a dashboard');
+                            this._redirecting = true;
+                            setTimeout(() => {
+                                window.location.href = 'dashboard.html';
+                            }, 100);
+                        } else {
+                            console.log('[AuthGuard] Usuario logueado pero necesita abrir caja, redirigiendo a caja');
+                            this._redirecting = true;
+                            setTimeout(() => {
+                                window.location.href = 'caja.html';
+                            }, 100);
+                        }
                     }
                 }
                 return;
             }
 
-            // Para todas las demás páginas, verificar autenticación
+            // Para todas las demás páginas, verificar autenticación INMEDIATAMENTE
+            console.log('[AuthGuard] Verificando autenticación en:', window.location.pathname);
+            
             if (!this.auth.isLoggedIn()) {
+                console.log('[AuthGuard] Usuario NO logueado, redirigiendo a login');
                 this.forceLogin('Debe iniciar sesión para acceder al sistema');
                 return;
             }
 
-            // Verificar si la sesión es válida
-            if (!this.auth.validateSession()) {
-                this.forceLogin('Su sesión ha expirado');
+            // Verificar si la sesión es válida de forma segura
+            try {
+                if (!this.auth.validateSession()) {
+                    console.log('[AuthGuard] Sesión INVÁLIDA, redirigiendo a login');
+                    this.forceLogin('Su sesión ha expirado');
+                    return;
+                }
+            } catch (error) {
+                console.error('[AuthGuard] Error validando sesión:', error);
+                console.log('[AuthGuard] Error en validación, redirigiendo a login por seguridad');
+                this.forceLogin('Error de autenticación');
                 return;
             }
 
+            console.log('[AuthGuard] Autenticación válida, continuando...');
+            
             // Verificar permisos específicos según la página
             this.checkPagePermissions();
             
@@ -94,16 +124,29 @@ class AuthGuard {
         // Si estamos en login, no validar
         if (window.location.pathname.includes('login.html')) return;
         
+        console.log('[AuthGuard] validateSession called on:', window.location.pathname);
+        
         // Verificar si hay usuario logueado
         if (!this.auth.isLoggedIn()) {
+            console.log('[AuthGuard] User not logged in, forcing login');
             this.forceLogin('Sesión no válida');
             return false;
         }
 
-        // Verificar validez de la sesión
-        if (!this.auth.validateSession()) {
-            this.forceLogin('Su sesión ha expirado');
-            return false;
+        // Verificar validez de la sesión con try-catch para capturar errores
+        try {
+            const sessionValid = this.auth.validateSession();
+            console.log('[AuthGuard] Session validation result:', sessionValid);
+            
+            if (!sessionValid) {
+                console.log('[AuthGuard] Session invalid, forcing login');
+                this.forceLogin('Su sesión ha expirado');
+                return false;
+            }
+        } catch (error) {
+            console.error('[AuthGuard] Error validating session:', error);
+            // No forzar logout por errores de validación, solo log del error
+            console.log('[AuthGuard] Session validation error, but continuing');
         }
 
         return true;
@@ -121,27 +164,29 @@ class AuthGuard {
         
         this._redirecting = true;
         
-        // Emitir evento personalizado
-        this.emitAuthEvent('forceLogin', message, 'warning');
+        console.log('[AuthGuard] Sesión inválida, redirigiendo a login:', message);
         
         // Limpiar cualquier sesión existente
         this.auth.logout();
         
-        // Mostrar mensaje
-        this.showAuthNotification(message, 'warning');
+        // Emitir evento personalizado
+        this.emitAuthEvent('forceLogin', message, 'warning');
         
-        // Redirigir al login después de un breve delay
-        console.log('[AuthGuard] Redirigiendo a login:', message);
-        setTimeout(() => {
-            window.location.href = 'login.html';
-        }, 500);
+        // Redirigir inmediatamente al login
+        window.location.href = 'login.html';
     }
 
     setupServerConnectionMonitoring() {
-        // Monitorear conexión al servidor cada 10 segundos
+        // DESHABILITADO: Sistema frontend-only no requiere monitoreo de servidor
+        // Este monitoreo causaba logout automático cuando la petición fallaba
+        console.log('[AuthGuard] Server monitoring disabled for frontend-only system');
+        
+        /* 
+        // Código original comentado:
+        // Monitorear conexión al servidor cada 15 segundos
         this.serverCheckInterval = setInterval(() => {
             this.checkServerConnection();
-        }, 10000);
+        }, 15000);
 
         // Verificar cuando la ventana recibe foco (usuario vuelve a la pestaña)
         window.addEventListener('focus', () => {
@@ -156,9 +201,15 @@ class AuthGuard {
         window.addEventListener('offline', () => {
             this.handleServerDisconnection();
         });
+        */
     }
 
     async checkServerConnection() {
+        // DESHABILITADO: No aplicable para sistema frontend-only
+        console.log('[AuthGuard] Server connection check disabled');
+        
+        /*
+        // Código original comentado:
         try {
             // Intentar hacer una petición al servidor
             const response = await fetch(window.location.origin + '/test-connection', {
@@ -175,9 +226,15 @@ class AuthGuard {
             // Error de conexión - servidor probablemente caído
             this.handleServerDisconnection();
         }
+        */
     }
 
     handleServerDisconnection() {
+        // DESHABILITADO: No aplicable para sistema frontend-only
+        console.log('[AuthGuard] Server disconnection handler disabled');
+        
+        /*
+        // Código original comentado:
         // Limpiar interval de verificación
         if (this.serverCheckInterval) {
             clearInterval(this.serverCheckInterval);
@@ -196,7 +253,8 @@ class AuthGuard {
         // Redirigir al login después de 2 segundos
         setTimeout(() => {
             window.location.href = 'login.html';
-        }, 2000);
+        }, 3000);
+        */
     }
 
     emitAuthEvent(type, message, level = 'info') {
@@ -345,7 +403,7 @@ class AuthGuard {
 
     setupInactivityLogout() {
         let inactivityTimer;
-        const INACTIVITY_TIME = 30 * 60 * 1000; // 30 minutos
+        const INACTIVITY_TIME = 60 * 60 * 1000; // 60 minutos
 
         const resetTimer = () => {
             clearTimeout(inactivityTimer);

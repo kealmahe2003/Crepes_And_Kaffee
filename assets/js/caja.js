@@ -466,10 +466,12 @@ class CajaManager {
         
         // Efectivo inicial + ventas en efectivo + entradas - salidas
         const sales = this.db.getSales();
-        const sessionSales = sales.filter(sale => 
-            new Date(sale.timestamp) >= new Date(this.currentSession.openedAt) &&
-            sale.metodoPago === 'efectivo'
-        );
+        const sessionSales = sales.filter(sale => {
+            // Las ventas usan 'fecha' no 'timestamp'
+            const saleDate = sale.fecha || sale.timestamp;
+            const sessionStart = this.currentSession.openedAt;
+            return new Date(saleDate) >= new Date(sessionStart) && sale.metodoPago === 'efectivo';
+        });
         
         const salesCash = sessionSales.reduce((sum, sale) => sum + sale.total, 0);
         

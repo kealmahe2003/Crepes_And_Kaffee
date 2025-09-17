@@ -542,77 +542,71 @@ class ConfiguracionManager {
         }
     }
 
-    cleanOldData() {
+    async cleanOldData() {
         console.log('cleanOldData called'); // Para debug
         
         try {
-            const modal = document.createElement('div');
-            modal.className = 'modal';
-            modal.id = 'cleanDataModal';
-            modal.innerHTML = `
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h3>🧹 Limpiar Datos Antiguos</h3>
-                        <button class="modal-close" onclick="window.configuracionManager.closeModal('cleanDataModal')">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <p>Selecciona qué datos quieres limpiar:</p>
-                        
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="cleanOrders" checked>
-                                <span class="checkmark"></span>
-                                Pedidos antiguos (más de 30 días)
-                            </label>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="cleanCancelledOrders" checked>
-                                <span class="checkmark"></span>
-                                Pedidos cancelados
-                            </label>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="cleanDeliveredOrders" checked>
-                                <span class="checkmark"></span>
-                                Pedidos entregados (más de 7 días)
-                            </label>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="customCleanDate">Eliminar datos anteriores a:</label>
-                            <input type="date" id="customCleanDate" class="form-control">
-                            <small>Deja vacío para usar las opciones por defecto</small>
-                        </div>
-                        
-                        <div class="alert alert-warning">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <strong>¡Atención!</strong> Esta acción no se puede deshacer.
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" onclick="window.configuracionManager.closeModal('cleanDataModal')">Cancelar</button>
-                        <button type="button" class="btn btn-danger" onclick="window.configuracionManager.executeDataClean()">
-                            <i class="fas fa-trash"></i>
-                            Limpiar Datos
-                        </button>
-                    </div>
-                </div>
-            `;
+            // Contar datos que se pueden limpiar
+            const orders = this.db.getOrders();
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
             
-            document.body.appendChild(modal);
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
             
-            // Mostrar notificación de que se abrió el modal
-            this.showNotification('Modal de limpieza de datos abierto', 'info');
+            const oldOrders = orders.filter(order => {
+                const orderDate = new Date(order.timestamp || order.fecha);
+                return orderDate < thirtyDaysAgo;
+            });
+            
+            const cancelledOrders = orders.filter(order => order.estado === 'cancelado');
+            const oldDeliveredOrders = orders.filter(order => {
+                const orderDate = new Date(order.timestamp || order.fecha);
+                return order.estado === 'entregado' && orderDate < sevenDaysAgo;
+            });
+            
+            const totalToClean = oldOrders.length + cancelledOrders.length + oldDeliveredOrders.length;
+            
+            if (totalToClean === 0) {
+                this.showNotification('No hay datos antiguos para limpiar', 'info');
+                return;
+            }
+
+            const confirmation = await this.showConfirmationModal({
+                title: '🧹 Limpiar Datos del Sistema',
+                message: '¿Estás seguro de que deseas limpiar los datos antiguos del sistema?',
+                details: `
+                    <div style="text-align: left; line-height: 1.6;">
+                        <strong>Datos que se eliminarán:</strong><br>
+                        • Pedidos antiguos (>30 días): <strong>${oldOrders.length}</strong><br>
+                        • Pedidos cancelados: <strong>${cancelledOrders.length}</strong><br>
+                        • Pedidos entregados (>7 días): <strong>${oldDeliveredOrders.length}</strong><br>
+                        <br>
+                        <strong>Total a eliminar: ${totalToClean} registros</strong><br>
+                        <br>
+                        <em>⚠️ Esta acción no se puede deshacer</em>
+                    </div>
+                `,
+                confirmText: 'Sí, Limpiar Datos',
+                cancelText: 'Cancelar',
+                type: 'danger',
+                showInput: true,
+                inputPlaceholder: 'Escribe "CONFIRMAR" para proceder',
+                inputRequired: true
+            });
+
+            if (confirmation.confirmed) {
+                if (confirmation.value.toUpperCase() !== 'CONFIRMAR') {
+                    this.showNotification('Confirmación incorrecta. Operación cancelada.', 'error');
+                    return;
+                }
+                
+                this.executeDataClean();
+            }
             
         } catch (error) {
             console.error('Error en cleanOldData:', error);
-            this.showNotification('Error al abrir el modal de limpieza: ' + error.message, 'error');
+            this.showNotification('Error al verificar datos para limpieza: ' + error.message, 'error');
         }
     }
 
@@ -732,6 +726,216 @@ class ConfiguracionManager {
             console.error('Error en executeDataClean:', error);
             this.showNotification('Error en la función de limpieza: ' + error.message, 'error');
         }
+    }
+
+    // ===== SISTEMA DE CONFIRMACIONES MEJORADAS =====
+    
+    showConfirmationModal(options) {
+        return new Promise((resolve) => {
+            const {
+                title = 'Confirmar Acción',
+                message = '¿Estás seguro de realizar esta acción?',
+                details = '',
+                confirmText = 'Confirmar',
+                cancelText = 'Cancelar',
+                type = 'warning', // 'warning', 'danger', 'info'
+                showInput = false,
+                inputPlaceholder = '',
+                inputRequired = false
+            } = options;
+
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.6);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 3000;
+                backdrop-filter: blur(2px);
+            `;
+
+            const typeColors = {
+                'warning': { bg: '#fff3cd', border: '#ffc107', icon: 'exclamation-triangle', color: '#856404' },
+                'danger': { bg: '#f8d7da', border: '#dc3545', icon: 'exclamation-circle', color: '#721c24' },
+                'info': { bg: '#d1ecf1', border: '#17a2b8', icon: 'info-circle', color: '#0c5460' }
+            };
+
+            const colorScheme = typeColors[type] || typeColors.warning;
+
+            modal.innerHTML = `
+                <div style="
+                    background: white;
+                    border-radius: 16px;
+                    padding: 0;
+                    max-width: 500px;
+                    width: 90%;
+                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+                    overflow: hidden;
+                ">
+                    <div style="
+                        background: ${colorScheme.bg};
+                        border-bottom: 2px solid ${colorScheme.border};
+                        padding: 20px;
+                        text-align: center;
+                    ">
+                        <i class="fas fa-${colorScheme.icon}" style="
+                            font-size: 48px;
+                            color: ${colorScheme.color};
+                            margin-bottom: 15px;
+                        "></i>
+                        <h3 style="
+                            margin: 0;
+                            color: ${colorScheme.color};
+                            font-size: 20px;
+                            font-weight: 600;
+                        ">${title}</h3>
+                    </div>
+                    
+                    <div style="padding: 24px;">
+                        <p style="
+                            margin: 0 0 15px 0;
+                            font-size: 16px;
+                            color: #333;
+                            line-height: 1.5;
+                        ">${message}</p>
+                        
+                        ${details ? `
+                            <div style="
+                                background: #f8f9fa;
+                                border: 1px solid #e9ecef;
+                                border-radius: 8px;
+                                padding: 15px;
+                                margin: 15px 0;
+                                font-size: 14px;
+                                color: #666;
+                            ">
+                                ${details}
+                            </div>
+                        ` : ''}
+                        
+                        ${showInput ? `
+                            <input type="text" id="confirmationInput" placeholder="${inputPlaceholder}" style="
+                                width: 100%;
+                                padding: 12px;
+                                border: 2px solid #e9ecef;
+                                border-radius: 8px;
+                                font-size: 14px;
+                                margin: 15px 0;
+                                box-sizing: border-box;
+                            " />
+                        ` : ''}
+                        
+                        <div style="
+                            display: flex;
+                            gap: 12px;
+                            margin-top: 20px;
+                        ">
+                            <button id="cancelBtn" style="
+                                flex: 1;
+                                padding: 12px 20px;
+                                border: 2px solid #6c757d;
+                                background: white;
+                                color: #6c757d;
+                                border-radius: 8px;
+                                font-weight: 600;
+                                cursor: pointer;
+                                transition: all 0.3s ease;
+                            ">${cancelText}</button>
+                            
+                            <button id="confirmBtn" style="
+                                flex: 1;
+                                padding: 12px 20px;
+                                border: 2px solid ${colorScheme.border};
+                                background: ${colorScheme.border};
+                                color: white;
+                                border-radius: 8px;
+                                font-weight: 600;
+                                cursor: pointer;
+                                transition: all 0.3s ease;
+                            ">${confirmText}</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            const confirmBtn = modal.querySelector('#confirmBtn');
+            const cancelBtn = modal.querySelector('#cancelBtn');
+            const input = modal.querySelector('#confirmationInput');
+
+            // Función para validar y confirmar
+            const handleConfirm = () => {
+                if (showInput && inputRequired) {
+                    const value = input.value.trim();
+                    if (!value) {
+                        input.style.borderColor = '#dc3545';
+                        input.focus();
+                        return;
+                    }
+                    resolve({ confirmed: true, value });
+                } else {
+                    resolve({ confirmed: true, value: showInput ? input.value : null });
+                }
+                modal.remove();
+            };
+
+            const handleCancel = () => {
+                resolve({ confirmed: false, value: null });
+                modal.remove();
+            };
+
+            // Event listeners
+            confirmBtn.addEventListener('click', handleConfirm);
+            cancelBtn.addEventListener('click', handleCancel);
+
+            // Cerrar con ESC
+            document.addEventListener('keydown', function escHandler(e) {
+                if (e.key === 'Escape') {
+                    document.removeEventListener('keydown', escHandler);
+                    handleCancel();
+                }
+            });
+
+            // Confirmar con Enter si no hay input o input no está enfocado
+            document.addEventListener('keydown', function enterHandler(e) {
+                if (e.key === 'Enter' && (!showInput || document.activeElement !== input)) {
+                    document.removeEventListener('keydown', enterHandler);
+                    handleConfirm();
+                }
+            });
+
+            // Focus en input si existe
+            if (input) {
+                setTimeout(() => input.focus(), 100);
+            }
+
+            // Hover effects
+            confirmBtn.addEventListener('mouseenter', () => {
+                confirmBtn.style.transform = 'translateY(-1px)';
+                confirmBtn.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+            });
+
+            confirmBtn.addEventListener('mouseleave', () => {
+                confirmBtn.style.transform = 'translateY(0)';
+                confirmBtn.style.boxShadow = 'none';
+            });
+
+            cancelBtn.addEventListener('mouseenter', () => {
+                cancelBtn.style.background = '#6c757d';
+                cancelBtn.style.color = 'white';
+            });
+
+            cancelBtn.addEventListener('mouseleave', () => {
+                cancelBtn.style.background = 'white';
+                cancelBtn.style.color = '#6c757d';
+            });
+        });
     }
 }
 

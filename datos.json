@@ -1,0 +1,1015 @@
+{
+  "timestamp": "2025-09-17T05:00:12.223Z",
+  "version": "1.0.0",
+  "data": {
+    "orders": [
+      {
+        "id": 1758081962900,
+        "items": [
+          {
+            "productId": 2,
+            "productName": "Cappuccino",
+            "quantity": 1,
+            "unitPrice": 5500,
+            "subtotal": 5500,
+            "estado": "pendiente"
+          },
+          {
+            "productId": 1,
+            "productName": "Americano",
+            "quantity": 1,
+            "unitPrice": 4500,
+            "subtotal": 4500,
+            "estado": "pendiente"
+          },
+          {
+            "productId": 3,
+            "productName": "Latte",
+            "quantity": 1,
+            "unitPrice": 6000,
+            "subtotal": 6000,
+            "estado": "pendiente"
+          }
+        ],
+        "total": 16000,
+        "mesa": "1",
+        "tipo": "mesa",
+        "estado": "cancelado",
+        "timestamp": "2025-09-17T04:06:02.900Z",
+        "fecha": "16/9/2025",
+        "hora": "23:06",
+        "fechaCancelacion": "2025-09-17T04:10:22.869Z"
+      },
+      {
+        "id": 1758081962901,
+        "mesa": "1",
+        "tipo": "mesa",
+        "items": [
+          {
+            "productId": 2,
+            "productName": "Cappuccino",
+            "nombre": "Cappuccino",
+            "quantity": 1,
+            "cantidad": 1,
+            "unitPrice": 5500,
+            "precio": 5500,
+            "subtotal": 5500,
+            "estado": "pendiente"
+          },
+          {
+            "productId": 1,
+            "productName": "Americano",
+            "nombre": "Americano",
+            "quantity": 3,
+            "cantidad": 3,
+            "unitPrice": 4500,
+            "precio": 4500,
+            "subtotal": 13500,
+            "estado": "pendiente"
+          }
+        ],
+        "total": 19000,
+        "estado": "cancelado",
+        "fecha": "2025-09-17",
+        "hora": "23:06",
+        "cliente": null,
+        "pedidoOriginalId": 1758081949420,
+        "esActualizacion": true,
+        "fechaActualizacion": "2025-09-17T04:06:02.903Z",
+        "horaActualizacion": "23:06",
+        "fechaCancelacion": "2025-09-17T04:10:20.214Z"
+      },
+      {
+        "id": 1758082254045,
+        "items": [
+          {
+            "productId": 2,
+            "productName": "Cappuccino",
+            "quantity": 2,
+            "unitPrice": 5500,
+            "subtotal": 11000,
+            "estado": "pendiente"
+          }
+        ],
+        "total": 11000,
+        "mesa": "1",
+        "tipo": "mesa",
+        "estado": "cancelado",
+        "timestamp": "2025-09-17T04:10:54.045Z",
+        "fecha": "16/9/2025",
+        "hora": "23:10",
+        "fechaCancelacion": "2025-09-17T04:13:02.813Z"
+      },
+      {
+        "id": 1758082254046,
+        "mesa": "1",
+        "tipo": "mesa",
+        "items": [
+          {
+            "productId": 2,
+            "productName": "Cappuccino",
+            "nombre": "Cappuccino",
+            "quantity": 1,
+            "cantidad": 1,
+            "unitPrice": 5500,
+            "precio": 5500,
+            "subtotal": 5500,
+            "estado": "pendiente"
+          },
+          {
+            "productId": 1,
+            "productName": "Americano",
+            "nombre": "Americano",
+            "quantity": 1,
+            "cantidad": 1,
+            "unitPrice": 4500,
+            "precio": 4500,
+            "subtotal": 4500,
+            "estado": "pendiente"
+          },
+          {
+            "productId": 3,
+            "productName": "Latte",
+            "nombre": "Latte",
+            "quantity": 2,
+            "cantidad": 2,
+            "unitPrice": 6000,
+            "precio": 6000,
+            "subtotal": 12000,
+            "estado": "pendiente"
+          }
+        ],
+        "total": 22000,
+        "estado": "cancelado",
+        "fecha": "2025-09-17",
+        "hora": "23:10",
+        "cliente": null,
+        "pedidoOriginalId": 1758082231861,
+        "esActualizacion": true,
+        "fechaActualizacion": "2025-09-17T04:10:54.047Z",
+        "horaActualizacion": "23:10",
+        "fechaCancelacion": "2025-09-17T04:13:11.461Z"
+      },
+      {
+        "id": 1758082407421,
+        "items": [
+          {
+            "productId": 3,
+            "productName": "Latte",
+            "quantity": 2,
+            "unitPrice": 6000,
+            "subtotal": 12000,
+            "estado": "pendiente"
+          }
+        ],
+        "total": 12000,
+        "mesa": "2",
+        "tipo": "mesa",
+        "estado": "cancelado",
+        "timestamp": "2025-09-17T04:13:27.421Z",
+        "fecha": "16/9/2025",
+        "hora": "23:13",
+        "fechaCancelacion": "2025-09-17T04:14:44.142Z"
+      },
+      {
+        "id": 1758082500885,
+        "items": [
+          {
+            "productId": 3,
+            "productName": "Latte",
+            "quantity": 3,
+            "unitPrice": 6000,
+            "subtotal": 18000,
+            "estado": "pendiente"
+          }
+        ],
+        "total": 18000,
+        "mesa": "2",
+        "tipo": "mesa",
+        "estado": "cancelado",
+        "timestamp": "2025-09-17T04:15:00.885Z",
+        "fecha": "16/9/2025",
+        "hora": "23:15",
+        "fechaCancelacion": "2025-09-17T04:22:32.742Z"
+      },
+      {
+        "id": 1758082500886,
+        "mesa": "2",
+        "tipo": "mesa",
+        "items": [
+          {
+            "productId": 3,
+            "productName": "Latte",
+            "nombre": "Latte",
+            "quantity": 4,
+            "cantidad": 4,
+            "unitPrice": 6000,
+            "precio": 6000,
+            "subtotal": 24000,
+            "estado": "pendiente"
+          }
+        ],
+        "total": 24000,
+        "estado": "cancelado",
+        "fecha": "2025-09-17",
+        "hora": "23:15",
+        "cliente": null,
+        "pedidoOriginalId": 1758082407422,
+        "esActualizacion": true,
+        "fechaActualizacion": "2025-09-17T04:15:00.890Z",
+        "horaActualizacion": "23:15",
+        "fechaCancelacion": "2025-09-17T04:22:35.933Z"
+      },
+      {
+        "id": 1758082970189,
+        "items": [
+          {
+            "productId": 1,
+            "productName": "Espresso",
+            "quantity": 2,
+            "unitPrice": 4500,
+            "subtotal": 9000,
+            "estado": "entregado",
+            "inicioPreparacion": "2025-09-17T04:27:33.006Z",
+            "finalizacion": "2025-09-17T04:27:36.285Z"
+          },
+          {
+            "productId": 2,
+            "productName": "Latte Frio",
+            "quantity": 1,
+            "unitPrice": 8000,
+            "subtotal": 8000,
+            "estado": "entregado",
+            "inicioPreparacion": "2025-09-17T04:27:34.110Z",
+            "finalizacion": "2025-09-17T04:27:34.718Z"
+          }
+        ],
+        "total": 17000,
+        "mesa": "1",
+        "tipo": "mesa",
+        "estado": "pagado",
+        "timestamp": "2025-09-17T04:22:50.189Z",
+        "fecha": "16/9/2025",
+        "hora": "23:22",
+        "fechaEntrega": "2025-09-17T04:27:39.542Z",
+        "fechaPago": "2025-09-17T04:28:16.501Z",
+        "metodoPago": "efectivo",
+        "totalPagado": null
+      },
+      {
+        "id": 1758082970190,
+        "mesa": "1",
+        "tipo": "mesa",
+        "items": [
+          {
+            "productId": 1,
+            "productName": "Espresso",
+            "nombre": "Espresso",
+            "quantity": 2,
+            "cantidad": 2,
+            "unitPrice": 4500,
+            "precio": 4500,
+            "subtotal": 9000,
+            "estado": "entregado",
+            "inicioPreparacion": "2025-09-17T04:23:36.742Z",
+            "finalizacion": "2025-09-17T04:23:36.901Z"
+          },
+          {
+            "productId": 2,
+            "productName": "Latte Frio",
+            "nombre": "Latte Frio",
+            "quantity": 2,
+            "cantidad": 2,
+            "unitPrice": 8000,
+            "precio": 8000,
+            "subtotal": 16000,
+            "estado": "entregado",
+            "inicioPreparacion": "2025-09-17T04:23:36.062Z",
+            "finalizacion": "2025-09-17T04:23:36.205Z"
+          },
+          {
+            "productId": 3,
+            "productName": "Sol y Coco",
+            "nombre": "Sol y Coco",
+            "quantity": 1,
+            "cantidad": 1,
+            "unitPrice": 13500,
+            "precio": 13500,
+            "subtotal": 13500,
+            "estado": "entregado",
+            "inicioPreparacion": "2025-09-17T04:23:34.766Z",
+            "finalizacion": "2025-09-17T04:23:35.189Z"
+          }
+        ],
+        "total": 38500,
+        "estado": "pagado",
+        "fecha": "2025-09-17",
+        "hora": "23:22",
+        "cliente": null,
+        "esActualizacion": true,
+        "fechaActualizacion": "2025-09-17T04:22:50.192Z",
+        "fechaEntrega": "2025-09-17T04:23:39.367Z",
+        "metodoPago": "transferencia",
+        "fechaPago": "2025-09-17T04:23:54.086Z",
+        "paymentData": {
+          "method": "transferencia",
+          "total": 38500
+        }
+      },
+      {
+        "id": 1758083206909,
+        "items": [
+          {
+            "productId": 2,
+            "productName": "Latte Frio",
+            "quantity": 2,
+            "unitPrice": 8000,
+            "subtotal": 16000,
+            "estado": "entregado",
+            "inicioPreparacion": "2025-09-17T04:27:07.462Z",
+            "finalizacion": "2025-09-17T04:27:08.046Z"
+          }
+        ],
+        "total": 16000,
+        "mesa": "1",
+        "tipo": "mesa",
+        "estado": "pagado",
+        "timestamp": "2025-09-17T04:26:46.909Z",
+        "fecha": "16/9/2025",
+        "hora": "23:26",
+        "fechaEntrega": "2025-09-17T04:27:10.094Z",
+        "metodoPago": "efectivo",
+        "fechaPago": "2025-09-17T04:27:58.502Z",
+        "paymentData": {
+          "method": "efectivo",
+          "total": 16000,
+          "received": 20000,
+          "change": 4000
+        }
+      },
+      {
+        "id": 1758083219110,
+        "items": [
+          {
+            "productId": 4,
+            "productName": "Rollo de Canela",
+            "quantity": 3,
+            "unitPrice": 6000,
+            "subtotal": 18000,
+            "estado": "entregado",
+            "inicioPreparacion": "2025-09-17T04:27:11.373Z",
+            "finalizacion": "2025-09-17T04:27:16.734Z"
+          },
+          {
+            "productId": 2,
+            "productName": "Latte Frio",
+            "quantity": 3,
+            "unitPrice": 8000,
+            "subtotal": 24000,
+            "estado": "entregado",
+            "inicioPreparacion": "2025-09-17T04:27:12.221Z",
+            "finalizacion": "2025-09-17T04:27:15.686Z"
+          },
+          {
+            "productId": 1,
+            "productName": "Espresso",
+            "quantity": 1,
+            "unitPrice": 4500,
+            "subtotal": 4500,
+            "estado": "entregado",
+            "inicioPreparacion": "2025-09-17T04:27:12.813Z",
+            "finalizacion": "2025-09-17T04:27:14.461Z"
+          }
+        ],
+        "total": 46500,
+        "mesa": "4",
+        "tipo": "mesa",
+        "estado": "pagado",
+        "timestamp": "2025-09-17T04:26:59.110Z",
+        "fecha": "16/9/2025",
+        "hora": "23:26",
+        "fechaEntrega": "2025-09-17T04:27:30.014Z",
+        "metodoPago": "efectivo",
+        "fechaPago": "2025-09-17T04:28:30.310Z",
+        "paymentData": {
+          "method": "efectivo",
+          "total": 46500,
+          "received": 50000,
+          "change": 3500
+        }
+      },
+      {
+        "id": 1758084824030,
+        "items": [
+          {
+            "productId": 1,
+            "productName": "Espresso",
+            "quantity": 1,
+            "unitPrice": 4500,
+            "subtotal": 4500,
+            "estado": "entregado",
+            "inicioPreparacion": "2025-09-17T04:53:58.999Z",
+            "finalizacion": "2025-09-17T04:53:59.166Z"
+          },
+          {
+            "productId": 2,
+            "productName": "Latte Frio",
+            "quantity": 1,
+            "unitPrice": 8000,
+            "subtotal": 8000,
+            "estado": "entregado",
+            "inicioPreparacion": "2025-09-17T04:53:57.424Z",
+            "finalizacion": "2025-09-17T04:53:58.319Z"
+          }
+        ],
+        "total": 12500,
+        "mesa": "7",
+        "tipo": "mesa",
+        "estado": "pagado",
+        "timestamp": "2025-09-17T04:53:44.030Z",
+        "fecha": "16/9/2025",
+        "hora": "23:53",
+        "fechaEntrega": "2025-09-17T04:54:01.422Z",
+        "metodoPago": "efectivo",
+        "fechaPago": "2025-09-17T04:54:15.792Z",
+        "paymentData": {
+          "method": "efectivo",
+          "total": 12500,
+          "received": 15000,
+          "change": 2500
+        }
+      }
+    ],
+    "products": [
+      {
+        "id": 1,
+        "name": "Espresso",
+        "price": 4500,
+        "category": "Bebidas Calientes",
+        "description": "",
+        "available": false,
+        "temporary": true,
+        "createdAt": "2025-09-17T04:18:51.198Z",
+        "active": true,
+        "cost": 0,
+        "image": "assets/img/placeholder.jpg",
+        "updatedAt": "2025-09-17T04:20:53.222Z"
+      },
+      {
+        "id": 2,
+        "name": "Latte Frio",
+        "price": 8000,
+        "category": "Bebidas Frias",
+        "description": "",
+        "available": false,
+        "temporary": true,
+        "createdAt": "2025-09-17T04:18:57.462Z",
+        "active": true,
+        "cost": 0,
+        "image": "assets/img/placeholder.jpg",
+        "updatedAt": "2025-09-17T04:21:12.517Z"
+      },
+      {
+        "id": 3,
+        "name": "Sol y Coco",
+        "price": 13500,
+        "category": "Crepes",
+        "description": "",
+        "available": false,
+        "temporary": true,
+        "createdAt": "2025-09-17T04:19:08.758Z",
+        "active": true,
+        "cost": 0,
+        "image": "assets/img/placeholder.jpg",
+        "updatedAt": "2025-09-17T04:21:48.591Z"
+      },
+      {
+        "id": 4,
+        "name": "Rollo de Canela",
+        "price": 6000,
+        "category": "Pasteleria",
+        "description": "Producto temporal para categoría",
+        "available": false,
+        "temporary": true,
+        "createdAt": "2025-09-17T04:19:13.349Z",
+        "active": true,
+        "cost": 0,
+        "image": "assets/img/placeholder.jpg",
+        "updatedAt": "2025-09-17T04:37:05.454Z"
+      },
+      {
+        "id": 5,
+        "name": "Chocolate",
+        "price": 6000,
+        "cost": 0,
+        "category": "Bebidas Calientes",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:31:09.590Z"
+      },
+      {
+        "id": 6,
+        "name": "Aguapanela con queso",
+        "price": 9000,
+        "cost": 0,
+        "category": "Bebidas Calientes",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:31:24.774Z"
+      },
+      {
+        "id": 7,
+        "name": "Te chai",
+        "price": 7000,
+        "cost": 0,
+        "category": "Bebidas Calientes",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:31:40.398Z"
+      },
+      {
+        "id": 8,
+        "name": "Milo",
+        "price": 6000,
+        "cost": 0,
+        "category": "Bebidas Calientes",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:31:56.846Z"
+      },
+      {
+        "id": 9,
+        "name": "Aromatica",
+        "price": 4000,
+        "cost": 0,
+        "category": "Bebidas Calientes",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:32:19.862Z"
+      },
+      {
+        "id": 10,
+        "name": "Milo frio",
+        "price": 9000,
+        "cost": 0,
+        "category": "Bebidas Frias",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:32:48.549Z"
+      },
+      {
+        "id": 11,
+        "name": "Jugo en leche",
+        "price": 7000,
+        "cost": 0,
+        "category": "Bebidas Frias",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:32:59.518Z"
+      },
+      {
+        "id": 12,
+        "name": "Jugo en agua",
+        "price": 6000,
+        "cost": 0,
+        "category": "Bebidas Frias",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:33:16.142Z"
+      },
+      {
+        "id": 13,
+        "name": "Malteada de milo",
+        "price": 12000,
+        "cost": 0,
+        "category": "Bebidas Frias",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:33:45.447Z"
+      },
+      {
+        "id": 14,
+        "name": "Malteada de Vainilla",
+        "price": 12000,
+        "cost": 0,
+        "category": "Bebidas Frias",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:34:25.126Z"
+      },
+      {
+        "id": 15,
+        "name": "Limonada natural",
+        "price": 6000,
+        "cost": 0,
+        "category": "Bebidas Frias",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:34:39.246Z"
+      },
+      {
+        "id": 16,
+        "name": "Postre del día",
+        "price": 12000,
+        "cost": 0,
+        "category": "Pasteleria",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:35:03.990Z",
+        "updatedAt": "2025-09-17T04:37:05.457Z"
+      },
+      {
+        "id": 17,
+        "name": "Galletas saludables",
+        "price": 9000,
+        "cost": 0,
+        "category": "Pasteleria",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:35:17.798Z",
+        "updatedAt": "2025-09-17T04:37:05.457Z"
+      },
+      {
+        "id": 18,
+        "name": "Galletas New York",
+        "price": 10000,
+        "cost": 0,
+        "category": "Pasteleria",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:35:34.390Z",
+        "updatedAt": "2025-09-17T04:37:05.457Z"
+      },
+      {
+        "id": 19,
+        "name": "Torta saludable",
+        "price": 13000,
+        "category": "Tortas",
+        "description": "",
+        "available": false,
+        "temporary": true,
+        "createdAt": "2025-09-17T04:37:10.062Z",
+        "active": true,
+        "cost": 0,
+        "image": "assets/img/placeholder.jpg",
+        "updatedAt": "2025-09-17T04:37:53.326Z"
+      },
+      {
+        "id": 20,
+        "name": "Torta de limon",
+        "price": 5000,
+        "cost": 0,
+        "category": "Tortas",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:38:11.614Z"
+      },
+      {
+        "id": 21,
+        "name": "Torta de coco",
+        "price": 5000,
+        "cost": 0,
+        "category": "Tortas",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:38:26.774Z"
+      },
+      {
+        "id": 22,
+        "name": "Torta de platano maduro",
+        "price": 6000,
+        "cost": 0,
+        "category": "Tortas",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:38:53.718Z"
+      },
+      {
+        "id": 23,
+        "name": "Torta de almojabana",
+        "price": 7000,
+        "cost": 0,
+        "category": "Tortas",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:39:15.014Z"
+      },
+      {
+        "id": 24,
+        "name": "Espiral de Banano y Fresa",
+        "price": 13500,
+        "cost": 0,
+        "category": "Crepes",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:40:55.630Z"
+      },
+      {
+        "id": 25,
+        "name": "Paraiso tropical",
+        "price": 13500,
+        "cost": 0,
+        "category": "Crepes",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:41:21.246Z"
+      },
+      {
+        "id": 26,
+        "name": "Trilogía de quesos",
+        "price": 15000,
+        "cost": 0,
+        "category": "Crepes",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:41:43.543Z"
+      },
+      {
+        "id": 27,
+        "name": "Crepe Sandwich",
+        "price": 13000,
+        "cost": 0,
+        "category": "Crepes",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:42:06.694Z"
+      },
+      {
+        "id": 28,
+        "name": "Tropifit",
+        "price": 15000,
+        "cost": 0,
+        "category": "Crepes",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:42:35.414Z"
+      },
+      {
+        "id": 29,
+        "name": "Arma tu crepe",
+        "price": 14000,
+        "cost": 0,
+        "category": "Crepes",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:43:13.310Z"
+      },
+      {
+        "id": 30,
+        "name": "Americano",
+        "price": 5000,
+        "cost": 0,
+        "category": "Bebidas Calientes",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:43:34.910Z"
+      },
+      {
+        "id": 31,
+        "name": "Kaffe de la casa",
+        "price": 7000,
+        "cost": 0,
+        "category": "Bebidas Calientes",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:43:51.647Z"
+      },
+      {
+        "id": 32,
+        "name": "Capuccino",
+        "price": 6500,
+        "cost": 0,
+        "category": "Bebidas Calientes",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:44:09.534Z"
+      },
+      {
+        "id": 33,
+        "name": "Latte",
+        "price": 6500,
+        "cost": 0,
+        "category": "Bebidas Calientes",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:44:28.902Z"
+      },
+      {
+        "id": 34,
+        "name": "Macchiato",
+        "price": 5000,
+        "cost": 0,
+        "category": "Bebidas Calientes",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:44:49.286Z"
+      },
+      {
+        "id": 35,
+        "name": "Mocaccino",
+        "price": 7000,
+        "cost": 0,
+        "category": "Bebidas Calientes",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:45:09.670Z"
+      },
+      {
+        "id": 36,
+        "name": "Latte con Banano",
+        "price": 9000,
+        "cost": 0,
+        "category": "Bebidas Frias",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:45:31.534Z"
+      },
+      {
+        "id": 37,
+        "name": "Latte con Fresa",
+        "price": 9000,
+        "cost": 0,
+        "category": "Bebidas Frias",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:45:50.070Z"
+      },
+      {
+        "id": 38,
+        "name": "Mocca Frio",
+        "price": 9000,
+        "cost": 0,
+        "category": "Bebidas Frias",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:51:52.518Z"
+      },
+      {
+        "id": 39,
+        "name": "Latte Frape",
+        "price": 10000,
+        "cost": 0,
+        "category": "Bebidas Frias",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:52:18.911Z"
+      },
+      {
+        "id": 40,
+        "name": "Affogato",
+        "price": 8000,
+        "cost": 0,
+        "category": "Bebidas Frias",
+        "description": "",
+        "active": true,
+        "image": "assets/img/placeholder.jpg",
+        "createdAt": "2025-09-17T04:52:49.007Z"
+      }
+    ],
+    "tables": [
+      {
+        "id": 1,
+        "numero": 1,
+        "estado": "libre",
+        "capacidad": 4,
+        "ubicacion": "Terraza",
+        "pedidoActual": null,
+        "reserva": null,
+        "ultimaActividad": "2025-09-17T04:28:01.494Z",
+        "pedidoId": null,
+        "clienteActual": null,
+        "horaLiberacion": "2025-09-17T04:28:16.502Z"
+      },
+      {
+        "id": 2,
+        "numero": 2,
+        "estado": "libre",
+        "capacidad": 4,
+        "ubicacion": "Terraza",
+        "pedidoActual": null,
+        "reserva": null,
+        "ultimaActividad": "2025-09-17T04:22:32.742Z",
+        "pedidoId": 1758082500886
+      },
+      {
+        "id": 3,
+        "numero": 3,
+        "estado": "libre",
+        "capacidad": 4,
+        "ubicacion": "Terraza",
+        "pedidoActual": null,
+        "reserva": null,
+        "ultimaActividad": null
+      },
+      {
+        "id": 4,
+        "numero": 4,
+        "estado": "libre",
+        "capacidad": 4,
+        "ubicacion": "Interior",
+        "pedidoActual": null,
+        "reserva": null,
+        "ultimaActividad": "2025-09-17T04:28:33.117Z",
+        "pedidoId": null,
+        "clienteActual": null,
+        "horaLiberacion": "2025-09-17T04:28:30.312Z"
+      },
+      {
+        "id": 5,
+        "numero": 5,
+        "estado": "libre",
+        "capacidad": 4,
+        "ubicacion": "Interior",
+        "pedidoActual": null,
+        "reserva": null,
+        "ultimaActividad": null
+      },
+      {
+        "id": 6,
+        "numero": 6,
+        "estado": "libre",
+        "capacidad": 4,
+        "ubicacion": "Interior",
+        "pedidoActual": null,
+        "reserva": null,
+        "ultimaActividad": null
+      },
+      {
+        "id": 7,
+        "numero": 7,
+        "estado": "libre",
+        "capacidad": 4,
+        "ubicacion": "Interior",
+        "pedidoActual": null,
+        "reserva": null,
+        "ultimaActividad": "2025-09-17T04:54:34.191Z",
+        "pedidoId": null,
+        "clienteActual": null,
+        "horaLiberacion": "2025-09-17T04:54:15.794Z"
+      }
+    ],
+    "users": [
+      {
+        "id": 1,
+        "username": "admin",
+        "password": "admin123",
+        "role": "administrador",
+        "name": "Administrador",
+        "active": true,
+        "createdAt": "2025-09-17T04:05:18.166Z"
+      },
+      {
+        "id": 2,
+        "username": "cajero",
+        "password": "cajero123",
+        "role": "cajero",
+        "name": "Cajero Principal",
+        "active": true,
+        "createdAt": "2025-09-17T04:05:18.166Z"
+      },
+      {
+        "id": 3,
+        "username": "mesero",
+        "password": "mesero123",
+        "role": "mesero",
+        "name": "Mesero Principal",
+        "active": true,
+        "createdAt": "2025-09-17T04:05:18.166Z"
+      }
+    ]
+  }
+}

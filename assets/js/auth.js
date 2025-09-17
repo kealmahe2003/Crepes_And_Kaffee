@@ -73,12 +73,54 @@ class Auth {
 
     // Verificar si necesita abrir caja
     needsCashOpening() {
-        if (!this.currentCashSession) return true;
+        console.log('[Auth] needsCashOpening - currentCashSession:', this.currentCashSession);
+        
+        if (!this.currentCashSession) {
+            console.log('[Auth] No cash session found, opening needed');
+            return true;
+        }
         
         const today = new Date().toDateString();
         const sessionDate = new Date(this.currentCashSession.openedAt).toDateString();
         
-        return today !== sessionDate || this.currentCashSession.status === 'closed';
+        console.log('[Auth] Today:', today);
+        console.log('[Auth] Session date:', sessionDate);
+        console.log('[Auth] Session status:', this.currentCashSession.status);
+        
+        const needsOpening = today !== sessionDate || this.currentCashSession.status === 'closed';
+        console.log('[Auth] Cash opening needed:', needsOpening);
+        
+        return needsOpening;
+    }
+
+    // Verificar si la caja está abierta para operaciones de venta
+    isCashSessionActive() {
+        if (!this.currentCashSession) {
+            return false;
+        }
+        
+        const today = new Date().toDateString();
+        const sessionDate = new Date(this.currentCashSession.openedAt).toDateString();
+        
+        return today === sessionDate && this.currentCashSession.status === 'open';
+    }
+
+    // Mostrar notificación de caja cerrada
+    showCashClosedNotification(action = 'realizar esta operación') {
+        const message = `La caja debe estar abierta para ${action}. Por favor, abra la caja primero.`;
+        
+        // Intentar mostrar notificación en el sistema actual
+        if (window.showNotification) {
+            window.showNotification(message, 'warning');
+        } else if (window.salesManager && window.salesManager.showNotification) {
+            window.salesManager.showNotification(message, 'warning');
+        } else if (window.mesasManager && window.mesasManager.showNotification) {
+            window.mesasManager.showNotification(message, 'warning');
+        } else {
+            alert(message);
+        }
+        
+        return false;
     }
 
     // Abrir sesión de caja
@@ -257,38 +299,64 @@ class Auth {
 
     // Validar sesión activa
     validateSession() {
+        console.log('[Auth] validateSession called on page:', window.location.pathname);
+        console.log('[Auth] isLoggedIn():', this.isLoggedIn());
+        
         if (!this.isLoggedIn()) {
-            this.showLogin();
+            console.log('[Auth] Not logged in');
             return false;
         }
 
-        if (this.needsCashOpening()) {
-            this.showCashOpening();
-            return false;
+        // Solo verificar apertura de caja en páginas específicas que la requieren
+        const pagesRequiringCash = ['caja.html', 'ventas.html', 'mesas.html'];
+        const currentPage = window.location.pathname;
+        const requiresCash = pagesRequiringCash.some(page => currentPage.includes(page));
+        
+        console.log('[Auth] Page requires cash session:', requiresCash);
+        console.log('[Auth] Current cash session active:', this.isCashSessionActive());
+        
+        // Para páginas que requieren caja, verificar que esté abierta
+        if (requiresCash && !this.isCashSessionActive()) {
+            console.log('[Auth] Cash session required but not active');
+            // No forzar logout, solo indicar que la caja debe estar abierta
+            return true; // Permitir que la página se cargue, la validación de caja se maneja en cada operación
         }
 
+        console.log('[Auth] Session validation passed');
         return true;
     }
 
     // Mostrar pantalla de login
     showLogin() {
-        document.getElementById('login-screen').classList.remove('hidden');
-        document.getElementById('main-system').classList.add('hidden');
-        document.getElementById('cash-opening-modal').classList.add('hidden');
+        const loginScreen = document.getElementById('login-screen');
+        const mainSystem = document.getElementById('main-system');
+        const cashModal = document.getElementById('cash-opening-modal');
+        
+        if (loginScreen) loginScreen.classList.remove('hidden');
+        if (mainSystem) mainSystem.classList.add('hidden');
+        if (cashModal) cashModal.classList.add('hidden');
     }
 
     // Mostrar modal de apertura de caja
     showCashOpening() {
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('main-system').classList.add('hidden');
-        document.getElementById('cash-opening-modal').classList.remove('hidden');
+        const loginScreen = document.getElementById('login-screen');
+        const mainSystem = document.getElementById('main-system');
+        const cashModal = document.getElementById('cash-opening-modal');
+        
+        if (loginScreen) loginScreen.classList.add('hidden');
+        if (mainSystem) mainSystem.classList.add('hidden');
+        if (cashModal) cashModal.classList.remove('hidden');
     }
 
     // Mostrar sistema principal
     showMainSystem() {
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('cash-opening-modal').classList.add('hidden');
-        document.getElementById('main-system').classList.remove('hidden');
+        const loginScreen = document.getElementById('login-screen');
+        const mainSystem = document.getElementById('main-system');
+        const cashModal = document.getElementById('cash-opening-modal');
+        
+        if (loginScreen) loginScreen.classList.add('hidden');
+        if (cashModal) cashModal.classList.add('hidden');
+        if (mainSystem) mainSystem.classList.remove('hidden');
     }
 }
 
