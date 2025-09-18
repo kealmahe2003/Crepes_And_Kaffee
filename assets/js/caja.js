@@ -53,6 +53,8 @@ class CajaManager {
 
     handleDocumentClick(e) {
         console.log('🖱️ [CajaManager] Click detectado en:', e.target.id || 'sin id', e.target.tagName, e.target.className);
+        console.log('🖱️ [CajaManager] Target completo:', e.target);
+        console.log('🖱️ [CajaManager] Event completo:', e);
         
         // Buscar el botón más cercano para manejar clicks en iconos/texto dentro del botón
         const button = e.target.closest('button');
@@ -60,12 +62,15 @@ class CajaManager {
         
         if (buttonId) {
             console.log('🎯 [CajaManager] Botón identificado:', buttonId);
+        } else {
+            console.log('❌ [CajaManager] No se encontró botón en el target');
         }
         
         // Abrir caja
         if (buttonId === 'openCashBtn') {
             e.preventDefault();
-            console.log('✅ [CajaManager] Click en abrir caja');
+            e.stopPropagation();
+            console.log('✅ [CajaManager] Click en abrir caja - EJECUTANDO');
             this.showOpenCashModal();
             return;
         }
@@ -143,26 +148,36 @@ class CajaManager {
     }
 
     updateDisplay() {
+        console.log('🔄 [CajaManager] updateDisplay iniciado');
         this.currentSession = this.db.getCurrentCashSession();
+        console.log('🔄 [CajaManager] Sesión actual:', this.currentSession);
         
-        if (this.currentSession) {
+        if (this.currentSession && this.currentSession.status === 'open') {
+            console.log('✅ [CajaManager] Sesión activa encontrada - mostrando info de caja');
+            this.showCashSessionInfo();
             this.updateCashInfo();
             this.updateMovements();
             this.updateStats();
+        } else {
+            console.log('❌ [CajaManager] No hay sesión activa - mostrando formulario de apertura');
+            this.showCashOpeningForm();
         }
     }
 
     // === APERTURA DE CAJA ===
     showOpenCashModal() {
-        console.log('Abriendo modal de apertura de caja');
+        console.log('🚀 [CajaManager] showOpenCashModal iniciado');
         
-        // Remover modal existente si hay alguno
-        const existingModal = document.getElementById('openCashModal');
-        if (existingModal) {
-            existingModal.remove();
-        }
-        
-        const modal = document.createElement('div');
+        try {
+            // Remover modal existente si hay alguno
+            const existingModal = document.getElementById('openCashModal');
+            if (existingModal) {
+                console.log('🗑️ [CajaManager] Removiendo modal existente');
+                existingModal.remove();
+            }
+            
+            console.log('🏗️ [CajaManager] Creando nuevo modal');
+            const modal = document.createElement('div');
         modal.className = 'modal active'; // Añadimos active directamente
         modal.id = 'openCashModal';
         modal.innerHTML = `
@@ -276,6 +291,13 @@ class CajaManager {
                 modal.remove();
             }
         });
+        
+        console.log('✅ [CajaManager] Modal creado y eventos configurados');
+        
+        } catch (error) {
+            console.error('❌ [CajaManager] Error al crear modal de apertura:', error);
+            this.showNotification('Error al abrir modal de caja', 'error');
+        }
     }
 
     openCash() {
@@ -286,9 +308,10 @@ class CajaManager {
             const initialAmountInput = document.getElementById('initialAmount');
             const notesInput = document.getElementById('openingNotes');
             
-            console.log('Elementos encontrados:', {
+            console.log('🔍 [CajaManager] Elementos encontrados:', {
                 initialAmountInput: !!initialAmountInput,
-                notesInput: !!notesInput
+                notesInput: !!notesInput,
+                currentUser: !!this.currentUser
             });
             
             if (!initialAmountInput) {
@@ -298,24 +321,24 @@ class CajaManager {
             const initialAmount = parseFloat(initialAmountInput.value) || 0;
             const notes = notesInput ? notesInput.value.trim() : '';
             
-            console.log('Valores obtenidos:', { initialAmount, notes });
+            console.log('💰 [CajaManager] Valores obtenidos:', { initialAmount, notes });
             
             if (initialAmount < 0) {
                 throw new Error('El monto inicial no puede ser negativo');
             }
             
             if (!this.currentUser) {
-                console.error('Usuario no autenticado');
+                console.error('❌ [CajaManager] Usuario no autenticado');
                 throw new Error('No hay usuario autenticado');
             }
 
-            console.log('Usuario actual completo:', this.currentUser);
-            console.log('ID del usuario:', this.currentUser.id);
-            console.log('Tipo de ID:', typeof this.currentUser.id);
+            console.log('👤 [CajaManager] Usuario actual completo:', this.currentUser);
+            console.log('🆔 [CajaManager] ID del usuario:', this.currentUser.id);
+            console.log('📝 [CajaManager] Tipo de ID:', typeof this.currentUser.id);
             
             // Verificar que no hay sesión activa
             const existingSession = this.db.getCurrentCashSession();
-            if (existingSession) {
+            if (existingSession && existingSession.status === 'open') {
                 throw new Error('Ya hay una sesión de caja activa');
             }
             
@@ -326,27 +349,27 @@ class CajaManager {
                 openButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Abriendo...';
             }
 
-            console.log('Llamando a db.openCashSession...');
+            console.log('🚀 [CajaManager] Llamando a db.openCashSession...');
             const session = this.db.openCashSession(this.currentUser.id, initialAmount, notes, this.currentUser.name);
             this.currentSession = session;
             
-            console.log('Sesión de caja creada exitosamente:', session);
+            console.log('✅ [CajaManager] Sesión de caja creada exitosamente:', session);
             
             // Cerrar modal
             const modal = document.getElementById('openCashModal');
             if (modal) {
                 modal.remove();
-                console.log('Modal cerrado');
+                console.log('🗑️ [CajaManager] Modal cerrado');
             }
             
             // Actualizar interfaz
-            console.log('Actualizando interfaz...');
+            console.log('🔄 [CajaManager] Actualizando interfaz...');
             this.showCashSessionInfo();
             this.updateDisplay();
             
             // Mostrar notificación de éxito
             this.showNotification('✅ Caja abierta exitosamente', 'success');
-            console.log('Notificación mostrada');
+            console.log('🎉 [CajaManager] Notificación mostrada');
             
             // Mostrar resumen de apertura
             setTimeout(() => {
@@ -357,7 +380,7 @@ class CajaManager {
             
         } catch (error) {
             console.error('=== ERROR EN APERTURA DE CAJA ===');
-            console.error('Error completo:', error);
+            console.error('💥 [CajaManager] Error completo:', error);
             console.error('Stack trace:', error.stack);
             
             this.showNotification('❌ Error al abrir caja: ' + error.message, 'error');
@@ -730,9 +753,14 @@ class CajaManager {
     }
 
     showCashOpeningForm() {
+        console.log('🔧 [CajaManager] showCashOpeningForm iniciado');
         const container = document.getElementById('cashContainer');
-        if (!container) return;
+        if (!container) {
+            console.error('❌ [CajaManager] No se encontró el contenedor cashContainer');
+            return;
+        }
         
+        console.log('✅ [CajaManager] Container encontrado, generando HTML');
         container.innerHTML = `
             <div class="cash-opening-form">
                 <div class="opening-message">
@@ -754,9 +782,52 @@ class CajaManager {
         `;
         
         console.log('🔄 [CajaManager] HTML de apertura generado');
+        console.log('🔧 [CajaManager] Verificando botón openCashBtn:', !!document.getElementById('openCashBtn'));
         
         // Cargar resumen del día
         this.loadDailySummary();
+    }
+
+    loadDailySummary() {
+        console.log('📊 [CajaManager] Cargando resumen del día...');
+        try {
+            const container = document.getElementById('dailySummary');
+            if (!container) {
+                console.log('⚠️ [CajaManager] No se encontró contenedor dailySummary');
+                return;
+            }
+
+            // Obtener ventas del día
+            const sales = this.db.getSales();
+            const today = new Date();
+            const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            
+            const todaySales = sales.filter(sale => {
+                const saleDate = new Date(sale.timestamp);
+                return saleDate >= todayStart;
+            });
+
+            const totalSales = todaySales.reduce((sum, sale) => sum + sale.total, 0);
+            const totalTransactions = todaySales.length;
+
+            container.innerHTML = `
+                <h4>📈 Resumen del Día</h4>
+                <div class="summary-stats">
+                    <div class="summary-item">
+                        <span class="summary-label">💰 Ventas del día:</span>
+                        <span class="summary-value">$${totalSales.toLocaleString()}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">🧾 Transacciones:</span>
+                        <span class="summary-value">${totalTransactions}</span>
+                    </div>
+                </div>
+            `;
+            
+            console.log('✅ [CajaManager] Resumen del día cargado');
+        } catch (error) {
+            console.error('❌ [CajaManager] Error cargando resumen del día:', error);
+        }
     }
 
     showClosingSummary(closedSession) {
