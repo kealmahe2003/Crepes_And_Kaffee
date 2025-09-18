@@ -14,7 +14,105 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Sidebar -->
+        <!    <!-- Scripts -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="assets/js/database.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/drive-backup.js"></script>
+    <script src="assets/js/configuracion.js"></script>
+    
+    <script>
+        // Funciones para Google Drive
+        async function connectGoogleDrive() {
+            try {
+                document.getElementById('connectDriveBtn').disabled = true;
+                document.getElementById('driveStatusText').textContent = 'Estado: Conectando...';
+                
+                if (!window.driveBackupManager) {
+                    window.driveBackupManager = new DriveBackupManager();
+                }
+                
+                const success = await window.driveBackupManager.authenticateWithDrive();
+                
+                if (success) {
+                    document.getElementById('driveStatusText').textContent = 'Estado: ✅ Conectado exitosamente';
+                    document.getElementById('testDriveBtn').disabled = false;
+                    window.configuracionManager.showNotification('✅ Conectado con Google Drive exitosamente', 'success');
+                } else {
+                    throw new Error('No se pudo autenticar');
+                }
+            } catch (error) {
+                document.getElementById('driveStatusText').textContent = 'Estado: ❌ Error de conexión';
+                window.configuracionManager.showNotification('❌ Error conectando con Google Drive: ' + error.message, 'error');
+            } finally {
+                document.getElementById('connectDriveBtn').disabled = false;
+            }
+        }
+        
+        async function testDriveUpload() {
+            try {
+                document.getElementById('testDriveBtn').disabled = true;
+                document.getElementById('driveStatusText').textContent = 'Estado: Probando subida...';
+                
+                if (!window.driveBackupManager) {
+                    throw new Error('Google Drive no está configurado');
+                }
+                
+                await window.driveBackupManager.testUpload();
+                document.getElementById('driveStatusText').textContent = 'Estado: ✅ Prueba exitosa';
+                window.configuracionManager.showNotification('✅ Prueba de subida exitosa', 'success');
+            } catch (error) {
+                document.getElementById('driveStatusText').textContent = 'Estado: ❌ Error en prueba';
+                window.configuracionManager.showNotification('❌ Error en prueba: ' + error.message, 'error');
+            } finally {
+                document.getElementById('testDriveBtn').disabled = false;
+            }
+        }
+        
+        function saveDriveConfig() {
+            try {
+                if (!window.driveBackupManager) {
+                    window.driveBackupManager = new DriveBackupManager();
+                }
+                
+                const config = {
+                    autoUploadToDrive: document.getElementById('autoUploadToDrive').checked,
+                    driveFolder: document.getElementById('driveFolder').value,
+                    autoUploadSchedule: document.getElementById('autoUploadSchedule').value,
+                    maxBackupsInDrive: parseInt(document.getElementById('maxBackupsInDrive').value),
+                    lastUpload: window.driveBackupManager.driveConfig.lastUpload
+                };
+                
+                window.driveBackupManager.saveDriveConfig(config);
+                window.configuracionManager.showNotification('✅ Configuración de Google Drive guardada', 'success');
+                
+                // Iniciar respaldos programados si está habilitado
+                if (config.autoUploadToDrive && config.autoUploadSchedule !== 'manual') {
+                    window.driveBackupManager.startScheduledBackups();
+                }
+            } catch (error) {
+                window.configuracionManager.showNotification('❌ Error guardando configuración: ' + error.message, 'error');
+            }
+        }
+        
+        // Cargar configuración existente al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                if (window.driveBackupManager && window.driveBackupManager.driveConfig) {
+                    const config = window.driveBackupManager.driveConfig;
+                    document.getElementById('autoUploadToDrive').checked = config.autoUploadToDrive;
+                    document.getElementById('driveFolder').value = config.driveFolder;
+                    document.getElementById('autoUploadSchedule').value = config.autoUploadSchedule;
+                    document.getElementById('maxBackupsInDrive').value = config.maxBackupsInDrive;
+                    
+                    if (config.lastUpload) {
+                        document.getElementById('driveStatusText').textContent = 
+                            `Estado: Último respaldo ${new Date(config.lastUpload).toLocaleString()}`;
+                    }
+                }
+            }, 1000);
+        });
+    </script>idebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h1 class="sidebar-title">MENÚ PRINCIPAL</h1>
@@ -360,19 +458,19 @@
                             <div class="backup-actions">
                                 <div class="backup-item">
                                     <div class="backup-info">
-                                        <h4>Crear Respaldo Manual</h4>
-                                        <p>Genera un respaldo completo de todos los datos</p>
+                                        <h4>Crear Respaldo Completo</h4>
+                                        <p>Genera un respaldo completo incluyendo todos los datos: ventas, pedidos, productos, usuarios, mesas, histórico completo de reportes y análisis</p>
                                     </div>
                                     <button class="btn btn-primary" onclick="createBackup()">
                                         <i class="fas fa-download"></i>
-                                        Crear Respaldo
+                                        Crear Respaldo Completo
                                     </button>
                                 </div>
                                 
                                 <div class="backup-item">
                                     <div class="backup-info">
-                                        <h4>Restaurar Datos</h4>
-                                        <p>Restaura datos desde un archivo de respaldo</p>
+                                        <h4>Restaurar Datos Completos</h4>
+                                        <p>Restaura todos los datos desde un archivo de respaldo completo incluyendo ventas históricas, reportes y análisis</p>
                                     </div>
                                     <div class="backup-controls">
                                         <input type="file" id="restoreFile" accept=".json" style="display: none;">
@@ -403,6 +501,74 @@
                                 <div class="form-group">
                                     <label>Hora del respaldo automático</label>
                                     <input type="time" class="form-input" value="02:00">
+                                </div>
+                            </div>
+                            
+                            <!-- Nueva sección de Google Drive -->
+                            <div class="drive-backup-section">
+                                <h4>🌐 Respaldos Automáticos a Google Drive</h4>
+                                
+                                <div class="form-group">
+                                    <div class="checkbox-group">
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" id="autoUploadToDrive">
+                                            <span class="checkmark"></span>
+                                            Subir respaldos automáticamente a Google Drive
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Nombre de carpeta en Drive:</label>
+                                    <input type="text" id="driveFolder" class="form-input" value="Respaldos_POS_Crepes_Kaffee" placeholder="Nombre de la carpeta en Drive">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Frecuencia de respaldos automáticos:</label>
+                                    <select id="autoUploadSchedule" class="form-input">
+                                        <option value="manual">Solo manual</option>
+                                        <option value="daily" selected>Diario</option>
+                                        <option value="weekly">Semanal</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Máximo respaldos en Drive:</label>
+                                    <input type="number" id="maxBackupsInDrive" class="form-input" value="10" min="1" max="50">
+                                    <small>Solo se mantendrán los respaldos más recientes</small>
+                                </div>
+                                
+                                <div class="drive-actions" style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                                    <button type="button" class="btn btn-secondary" onclick="connectGoogleDrive()" id="connectDriveBtn">
+                                        <i class="fas fa-google-drive"></i>
+                                        Conectar con Google Drive
+                                    </button>
+                                    
+                                    <button type="button" class="btn btn-success" onclick="testDriveUpload()" id="testDriveBtn" disabled>
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        Probar Subida
+                                    </button>
+                                    
+                                    <button type="button" class="btn btn-info" onclick="saveDriveConfig()">
+                                        <i class="fas fa-save"></i>
+                                        Guardar Configuración
+                                    </button>
+                                </div>
+                                
+                                <div id="driveStatus" class="drive-status" style="margin-top: 10px;">
+                                    <small id="driveStatusText">Estado: No conectado</small>
+                                </div>
+                                
+                                <div class="drive-help" style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px; font-size: 12px;">
+                                    <strong>💡 Instrucciones:</strong>
+                                    <ol style="margin: 5px 0; padding-left: 20px;">
+                                        <li>Haz clic en "Conectar con Google Drive"</li>
+                                        <li>Autoriza la aplicación en tu cuenta de Google</li>
+                                        <li>Configura la frecuencia de respaldos</li>
+                                        <li>Haz clic en "Probar Subida" para verificar</li>
+                                        <li>Guarda la configuración</li>
+                                    </ol>
+                                    <p style="margin: 5px 0;"><strong>Nota:</strong> Los respaldos se subirán automáticamente a Drive cuando crees uno nuevo.</p>
                                 </div>
                             </div>
                         </div>

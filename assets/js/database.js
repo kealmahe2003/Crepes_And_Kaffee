@@ -511,40 +511,139 @@ class Database {
 
     // Backup y restauración
     createBackup() {
+        console.log('[Database] Creando respaldo completo del sistema...');
+        
         const backup = {
             timestamp: new Date().toISOString(),
-            version: '1.0',
+            version: '2.0', // Incrementado para indicar respaldo mejorado
+            systemInfo: {
+                backupType: 'complete',
+                createdBy: this.getCurrentUser()?.name || 'Sistema',
+                description: 'Respaldo completo incluyendo todos los datos de ventas, reportes y análisis'
+            },
             data: {
+                // Datos básicos del sistema
                 users: this.getUsers(),
                 products: this.getProducts(),
-                sales: this.getSales(),
-                orders: this.getOrders(),
                 tables: this.getTables(),
                 config: this.getConfig(),
-                cashSessions: this.getCashSessions()
+                
+                // Datos de ventas y transacciones
+                sales: this.getSales(),
+                orders: this.getOrders(),
+                orderLogs: this.getOrderLogs(),
+                cashSessions: this.getCashSessions(),
+                
+                // Datos de reportes y análisis (para poder recrear reportes históricos)
+                categories: this.getCategories(),
+                
+                // Datos calculados para backup completo de reportes
+                analytics: {
+                    // Resumen ejecutivo del último año
+                    executiveSummary: this.getExecutiveSummary('year'),
+                    
+                    // Análisis de ventas generales (últimos 365 días)
+                    salesAnalytics: this.getSalesAnalytics(
+                        new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                        new Date().toISOString().split('T')[0]
+                    ),
+                    
+                    // Top productos vendidos (histórico completo)
+                    topSellingProducts: this.getTopSellingProducts(50), // Top 50 productos
+                    
+                    // Análisis por categorías (histórico completo) 
+                    categoryAnalytics: this.getCategoryAnalytics(),
+                    
+                    // Análisis de métodos de pago (histórico completo)
+                    paymentMethodAnalytics: this.getPaymentMethodAnalytics(),
+                    
+                    // Tendencias de ventas (últimos 90 días)
+                    salesTrends: this.getDailySalesTrends(90),
+                    
+                    // Rendimiento de cajeros (histórico completo)
+                    cashierPerformance: this.getCashierPerformance()
+                },
+                
+                // Metadata adicional para restore
+                backupMetadata: {
+                    totalSales: this.getSales().length,
+                    totalOrders: this.getOrders().length,
+                    totalUsers: this.getUsers().length,
+                    totalProducts: this.getProducts().length,
+                    totalTables: this.getTables().length,
+                    totalCashSessions: this.getCashSessions().length,
+                    totalOrderLogs: this.getOrderLogs().length,
+                    dateRange: {
+                        firstSale: this.getSales().length > 0 ? 
+                            Math.min(...this.getSales().map(s => new Date(s.fecha || s.timestamp || Date.now()).getTime())) : null,
+                        lastSale: this.getSales().length > 0 ? 
+                            Math.max(...this.getSales().map(s => new Date(s.fecha || s.timestamp || Date.now()).getTime())) : null
+                    }
+                }
             }
         };
 
+        // Actualizar configuración con timestamp del último backup
         const config = this.getConfig();
         config.lastBackup = backup.timestamp;
         this.saveConfig(config);
+
+        console.log('[Database] Respaldo completado:', {
+            timestamp: backup.timestamp,
+            totalItems: Object.keys(backup.data).length,
+            metadata: backup.data.backupMetadata
+        });
 
         return backup;
     }
 
     restoreBackup(backupData) {
         try {
+            console.log('[Database] Iniciando restauración de respaldo...');
+            
             const data = backupData.data;
+            const backupVersion = backupData.version || '1.0';
+            
+            console.log('[Database] Versión del respaldo:', backupVersion);
+            
+            // Restaurar datos básicos del sistema
             this.saveUsers(data.users || []);
             this.saveProducts(data.products || []);
-            this.saveSales(data.sales || []);
-            this.saveOrders(data.orders || []);
             this.saveTables(data.tables || []);
             this.saveConfig(data.config || {});
+            
+            // Restaurar datos de ventas y transacciones
+            this.saveSales(data.sales || []);
+            this.saveOrders(data.orders || []);
             this.saveCashSessions(data.cashSessions || []);
+            
+            // Restaurar logs de pedidos (si existen)
+            if (data.orderLogs) {
+                localStorage.setItem('pos_order_logs', JSON.stringify(data.orderLogs));
+                console.log('[Database] Logs de pedidos restaurados:', data.orderLogs.length, 'entradas');
+            }
+            
+            // Si es un backup versión 2.0 o superior, mostrar información adicional
+            if (backupVersion >= '2.0' && data.backupMetadata) {
+                console.log('[Database] Información del respaldo:', {
+                    totalSales: data.backupMetadata.totalSales,
+                    totalOrders: data.backupMetadata.totalOrders,
+                    totalUsers: data.backupMetadata.totalUsers,
+                    totalProducts: data.backupMetadata.totalProducts,
+                    dateRange: data.backupMetadata.dateRange
+                });
+                
+                // Los datos de analytics no se restauran directamente ya que se calculan dinámicamente,
+                // pero están disponibles en el backup para referencia
+                if (data.analytics) {
+                    console.log('[Database] Datos de análisis disponibles en el respaldo (no se restauran directamente)');
+                }
+            }
+            
+            console.log('[Database] Restauración completada exitosamente');
             return true;
         } catch (error) {
-            console.error('Error al restaurar backup:', error);
+            console.error('[Database] Error al restaurar backup:', error);
             return false;
         }
     }

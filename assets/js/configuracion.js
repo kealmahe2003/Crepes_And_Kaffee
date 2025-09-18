@@ -1396,32 +1396,96 @@ function testPrint(type) {
 }
 
 function createBackup() {
-    window.configuracionManager.showNotification('Creando respaldo...', 'info');
+    window.configuracionManager.showNotification('Creando respaldo completo...', 'info');
     
-    // Simular creación de respaldo
-    setTimeout(() => {
-        const backupData = {
-            timestamp: new Date().toISOString(),
-            version: '1.0.0',
-            data: {
-                orders: window.configuracionManager.db.getOrders(),
-                products: window.configuracionManager.db.getProducts(),
-                tables: window.configuracionManager.db.getTables(),
-                users: window.configuracionManager.db.getUsers()
+    // Simular progreso de creación de respaldo
+    setTimeout(async () => {
+        try {
+            console.log('[ConfiguracionManager] Iniciando creación de respaldo completo...');
+            
+            // Crear respaldo completo usando la función mejorada de Database
+            const backupData = window.configuracionManager.db.createBackup();
+            
+            // Información adicional del respaldo
+            const backupInfo = {
+                ...backupData,
+                exportInfo: {
+                    exportedBy: window.configuracionManager.db.getCurrentUser()?.name || 'Sistema',
+                    exportDate: new Date().toISOString(),
+                    systemVersion: '2.0',
+                    description: 'Respaldo completo del sistema POS Crêpes & Kaffee incluyendo todos los datos de ventas, reportes históricos y análisis completos'
+                }
+            };
+            
+            // Generar nombre de archivo
+            const timestamp = new Date().toISOString().split('T')[0];
+            const timeString = new Date().toTimeString().slice(0,5).replace(':', '');
+            const filename = `backup_crepes_kaffee_completo_${timestamp}_${timeString}.json`;
+            
+            // Crear archivo JSON para descarga local
+            const blob = new Blob([JSON.stringify(backupInfo, null, 2)], { type: 'application/json' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            // Intentar subir automáticamente a Google Drive si está configurado
+            let driveUploadSuccess = false;
+            if (window.driveBackupManager) {
+                try {
+                    driveUploadSuccess = await window.driveBackupManager.enhanceExistingBackup(backupInfo, filename);
+                } catch (driveError) {
+                    console.warn('[ConfiguracionManager] Error subiendo a Drive:', driveError);
+                }
             }
-        };
-        
-        const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `backup_crepes_kaffee_${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        
-        window.configuracionManager.showNotification('Respaldo creado y descargado exitosamente', 'success');
+            
+            // Mostrar información del respaldo creado
+            const metadata = backupInfo.data.backupMetadata;
+            let summaryMessage = 'Respaldo completo creado exitosamente';
+            
+            if (metadata) {
+                summaryMessage += `\n\n📊 Resumen del respaldo:\n`;
+                summaryMessage += `• ${metadata.totalSales} ventas registradas\n`;
+                summaryMessage += `• ${metadata.totalOrders} pedidos\n`;
+                summaryMessage += `• ${metadata.totalProducts} productos\n`;
+                summaryMessage += `• ${metadata.totalUsers} usuarios\n`;
+                summaryMessage += `• ${metadata.totalCashSessions} sesiones de caja\n`;
+                summaryMessage += `• ${metadata.totalOrderLogs} logs de actividad\n`;
+                
+                if (metadata.dateRange.firstSale && metadata.dateRange.lastSale) {
+                    const firstDate = new Date(metadata.dateRange.firstSale).toLocaleDateString();
+                    const lastDate = new Date(metadata.dateRange.lastSale).toLocaleDateString();
+                    summaryMessage += `\n📅 Rango de datos: ${firstDate} - ${lastDate}`;
+                }
+            }
+            
+            summaryMessage += '\n\n✅ Incluye: Datos completos, histórico de ventas, reportes y análisis';
+            
+            // Agregar información sobre Drive si aplicable
+            if (driveUploadSuccess) {
+                summaryMessage += '\n☁️ Subido automáticamente a Google Drive';
+            } else if (window.driveBackupManager && window.driveBackupManager.driveConfig.autoUploadToDrive) {
+                summaryMessage += '\n⚠️ Error subiendo a Google Drive (revisar configuración)';
+            }
+            
+            window.configuracionManager.showNotification(summaryMessage, 'success');
+            
+            console.log('[ConfiguracionManager] Respaldo completo creado:', {
+                filename: filename,
+                size: blob.size + ' bytes',
+                timestamp: backupInfo.timestamp,
+                metadata: metadata,
+                driveUpload: driveUploadSuccess
+            });
+            
+        } catch (error) {
+            console.error('[ConfiguracionManager] Error al crear respaldo:', error);
+            window.configuracionManager.showNotification('Error al crear el respaldo: ' + error.message, 'error');
+        }
     }, 2000);
 }
 
@@ -1470,32 +1534,60 @@ function restoreBackup() {
             try {
                 const backupData = JSON.parse(event.target.result);
                 
+                console.log('[ConfiguracionManager] Iniciando restauración de respaldo...');
+                console.log('[ConfiguracionManager] Versión del respaldo:', backupData.version || '1.0');
+                
                 if (!backupData.data || !backupData.timestamp) {
-                    throw new Error('Formato de respaldo inválido');
+                    throw new Error('Formato de respaldo inválido - faltan datos básicos');
                 }
                 
-                // Restaurar datos
-                const { orders, products, tables, users } = backupData.data;
+                // Usar la función mejorada de restauración de Database
+                const success = window.configuracionManager.db.restoreBackup(backupData);
                 
-                if (orders) localStorage.setItem('pos_orders', JSON.stringify(orders));
-                if (products) localStorage.setItem('pos_products', JSON.stringify(products));
-                if (tables) localStorage.setItem('pos_tables', JSON.stringify(tables));
-                if (users) localStorage.setItem('pos_users', JSON.stringify(users));
+                if (!success) {
+                    throw new Error('Error durante el proceso de restauración');
+                }
                 
-                window.configuracionManager.showNotification('Datos restaurados exitosamente', 'success');
+                // Mostrar información del respaldo restaurado
+                let successMessage = 'Datos restaurados exitosamente';
+                
+                if (backupData.data.backupMetadata) {
+                    const metadata = backupData.data.backupMetadata;
+                    successMessage += `\n\n📊 Datos restaurados:\n`;
+                    successMessage += `• ${metadata.totalSales} ventas\n`;
+                    successMessage += `• ${metadata.totalOrders} pedidos\n`;
+                    successMessage += `• ${metadata.totalProducts} productos\n`;
+                    successMessage += `• ${metadata.totalUsers} usuarios\n`;
+                    successMessage += `• ${metadata.totalCashSessions} sesiones de caja\n`;
+                    successMessage += `• ${metadata.totalOrderLogs} logs de actividad\n`;
+                    
+                    if (metadata.dateRange.firstSale && metadata.dateRange.lastSale) {
+                        const firstDate = new Date(metadata.dateRange.firstSale).toLocaleDateString();
+                        const lastDate = new Date(metadata.dateRange.lastSale).toLocaleDateString();
+                        successMessage += `\n📅 Rango de datos: ${firstDate} - ${lastDate}`;
+                    }
+                }
+                
+                if (backupData.version >= '2.0') {
+                    successMessage += '\n\n✅ Respaldo completo restaurado con todos los datos históricos';
+                }
+                
+                window.configuracionManager.showNotification(successMessage, 'success');
                 
                 // Limpiar el input de archivo
                 fileInput.value = '';
                 document.querySelector('button[onclick="restoreBackup()"]').disabled = true;
                 document.querySelector('button[onclick="restoreBackup()"]').innerHTML = `<i class="fas fa-upload"></i> Restaurar`;
                 
-                // Recargar después de 2 segundos
+                console.log('[ConfiguracionManager] Restauración completada exitosamente');
+                
+                // Recargar después de 3 segundos para permitir leer el mensaje
                 setTimeout(() => {
                     location.reload();
-                }, 2000);
+                }, 3000);
                 
             } catch (error) {
-                console.error('Error al restaurar respaldo:', error);
+                console.error('[ConfiguracionManager] Error al restaurar respaldo:', error);
                 window.configuracionManager.showNotification('Error al restaurar los datos: ' + error.message, 'error');
             }
         };
