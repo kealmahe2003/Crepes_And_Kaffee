@@ -384,6 +384,13 @@ class Database {
         const sales = this.getSales();
         sales.push(sale);
         this.saveSales(sales);
+        
+        // Disparar evento personalizado para notificar que se completó una venta
+        const saleCompletedEvent = new CustomEvent('saleCompleted', {
+            detail: { sale: sale }
+        });
+        window.dispatchEvent(saleCompletedEvent);
+        
         return sale;
     }
 
@@ -593,6 +600,8 @@ class Database {
             totalCard: 0,
             totalTransfers: 0,
             totalMixed: 0,
+            cashFromMixed: 0,
+            cardFromMixed: 0,
             difference: 0,
             notes: notes,
             transactions: [],
@@ -641,10 +650,21 @@ class Database {
                     break;
                 case 'mixto':
                     acc.totalMixed += sale.total;
+                    // Desglosar pagos mixtos
+                    if (sale.paymentData && sale.paymentData.cashAmount) {
+                        acc.cashFromMixed += sale.paymentData.cashAmount;
+                        // IMPORTANTE: La parte en efectivo también se suma al total de efectivo de caja
+                        acc.totalCash += sale.paymentData.cashAmount;
+                    }
+                    if (sale.paymentData && sale.paymentData.cardAmount) {
+                        acc.cardFromMixed += sale.paymentData.cardAmount;
+                        // La parte de transferencia se suma al total de transferencias
+                        acc.totalTransfers += sale.paymentData.cardAmount;
+                    }
                     break;
             }
             return acc;
-        }, { totalSales: 0, totalCash: 0, totalCard: 0, totalTransfers: 0, totalMixed: 0 });
+        }, { totalSales: 0, totalCash: 0, totalCard: 0, totalTransfers: 0, totalMixed: 0, cashFromMixed: 0, cardFromMixed: 0 });
 
         // Calcular diferencia
         const expectedCash = currentSession.totalCash + totals.totalCash;
@@ -659,6 +679,8 @@ class Database {
         currentSession.totalCard = totals.totalCard;
         currentSession.totalTransfers = totals.totalTransfers;
         currentSession.totalMixed = totals.totalMixed;
+        currentSession.cashFromMixed = totals.cashFromMixed;
+        currentSession.cardFromMixed = totals.cardFromMixed;
         currentSession.difference = difference;
         currentSession.notes += (currentSession.notes ? '\n' : '') + notes;
 
@@ -715,6 +737,12 @@ class Database {
         }
         localStorage.setItem('pos_cash_sessions', JSON.stringify(sessions));
         localStorage.setItem('pos_current_cash_session', JSON.stringify(currentSession));
+
+        // Disparar evento personalizado para notificar movimiento de caja
+        const cashMovementEvent = new CustomEvent('cashMovementAdded', {
+            detail: { movement: movement, session: currentSession }
+        });
+        window.dispatchEvent(cashMovementEvent);
 
         return movement;
     }
@@ -1084,6 +1112,15 @@ class Database {
                 if (method === 'mixto' && sale.paymentData) {
                     paymentStats[method].cashPart += sale.paymentData.cashAmount || 0;
                     paymentStats[method].cardPart += sale.paymentData.cardAmount || 0;
+                    
+                    // Sumar la parte en efectivo de pagos mixtos al total de efectivo
+                    if (sale.paymentData.cashAmount) {
+                        paymentStats.efectivo.total += sale.paymentData.cashAmount;
+                    }
+                    // Sumar la parte de transferencia de pagos mixtos al total de transferencias
+                    if (sale.paymentData.cardAmount) {
+                        paymentStats.transferencia.total += sale.paymentData.cardAmount;
+                    }
                 }
             }
         });

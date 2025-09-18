@@ -535,6 +535,34 @@
     color: #6b7280;
 }
 
+.payment-breakdown {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.breakdown-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 13px;
+}
+
+.breakdown-item:last-child {
+    margin-bottom: 0;
+}
+
+.breakdown-label {
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.breakdown-value {
+    color: #374151;
+    font-weight: 600;
+}
+
 /* === INSIGHTS === */
 .insights-section {
     margin-top: 30px;

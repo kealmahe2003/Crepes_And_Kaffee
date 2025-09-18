@@ -2,10 +2,13 @@
 
 class CajaManager {
     constructor() {
+        console.log('🔧 [CajaManager] Iniciando constructor');
         this.db = new Database();
         this.currentUser = null;
         this.currentSession = null;
+        this.eventsBound = false; // Flag para evitar múltiples bindings
         this.init();
+        console.log('✅ [CajaManager] Constructor completado');
     }
 
     init() {
@@ -34,34 +37,78 @@ class CajaManager {
     }
 
     bindEvents() {
+        if (this.eventsBound) {
+            console.log('⚠️ [CajaManager] Eventos ya vinculados, saltando...');
+            return;
+        }
+        
+        console.log('🔧 [CajaManager] Vinculando eventos...');
+        
+        // Usar delegación de eventos en el documento para asegurar que siempre funcionen
+        document.addEventListener('click', this.handleDocumentClick.bind(this));
+        
+        this.eventsBound = true;
+        console.log('✅ [CajaManager] Eventos vinculados usando delegación');
+    }
+
+    handleDocumentClick(e) {
+        console.log('🖱️ [CajaManager] Click detectado en:', e.target.id || 'sin id', e.target.tagName, e.target.className);
+        
+        // Buscar el botón más cercano para manejar clicks en iconos/texto dentro del botón
+        const button = e.target.closest('button');
+        const buttonId = button ? button.id : null;
+        
+        if (buttonId) {
+            console.log('🎯 [CajaManager] Botón identificado:', buttonId);
+        }
+        
         // Abrir caja
-        const openCashBtn = document.getElementById('openCashBtn');
-        if (openCashBtn) {
-            openCashBtn.addEventListener('click', () => this.showOpenCashModal());
+        if (buttonId === 'openCashBtn') {
+            e.preventDefault();
+            console.log('✅ [CajaManager] Click en abrir caja');
+            this.showOpenCashModal();
+            return;
         }
-
+        
         // Cerrar caja
-        const closeCashBtn = document.getElementById('closeCashBtn');
-        if (closeCashBtn) {
-            closeCashBtn.addEventListener('click', () => this.showCloseCashModal());
+        if (buttonId === 'closeCashBtn') {
+            e.preventDefault();
+            console.log('✅ [CajaManager] Click en cerrar caja');
+            this.showCloseCashModal();
+            return;
         }
-
+        
         // Movimientos de caja
-        const addMovementBtn = document.getElementById('addMovementBtn');
-        if (addMovementBtn) {
-            addMovementBtn.addEventListener('click', () => this.showMovementModal());
+        if (buttonId === 'addMovementBtn') {
+            e.preventDefault();
+            console.log('✅ [CajaManager] Click en movimiento de caja');
+            this.showMovementModal();
+            return;
         }
-
+        
         // Ver historial
-        const viewHistoryBtn = document.getElementById('viewHistoryBtn');
-        if (viewHistoryBtn) {
-            viewHistoryBtn.addEventListener('click', () => this.showHistoryModal());
+        if (buttonId === 'viewHistoryBtn') {
+            e.preventDefault();
+            console.log('✅ [CajaManager] Click en ver historial');
+            this.showHistoryModal();
+            return;
         }
-
+        
+        // Actualizar datos
+        if (buttonId === 'refreshDataBtn') {
+            e.preventDefault();
+            console.log('✅ [CajaManager] Click en actualizar datos');
+            this.forceUpdate();
+            this.showNotification('🔄 Datos actualizados', 'success');
+            return;
+        }
+        
         // Imprimir arqueo
-        const printArqueoBtn = document.getElementById('printArqueoBtn');
-        if (printArqueoBtn) {
-            printArqueoBtn.addEventListener('click', () => this.printArqueo());
+        if (buttonId === 'printArqueoBtn') {
+            e.preventDefault();
+            console.log('✅ [CajaManager] Click en imprimir arqueo');
+            this.printArqueo();
+            return;
         }
     }
 
@@ -70,6 +117,29 @@ class CajaManager {
         setInterval(() => {
             this.updateDisplay();
         }, 30000);
+        
+        // También actualizar cuando la ventana recupere el foco (por si se hicieron ventas en otra pestaña)
+        window.addEventListener('focus', () => {
+            console.log('🔄 [CajaManager] Ventana recuperó el foco, actualizando datos...');
+            this.updateDisplay();
+        });
+        
+        // Escuchar eventos personalizados para actualización de ventas
+        document.addEventListener('saleCompleted', () => {
+            console.log('🔄 [CajaManager] Venta completada detectada, actualizando datos...');
+            this.updateDisplay();
+        });
+        
+        document.addEventListener('cashMovementAdded', () => {
+            console.log('🔄 [CajaManager] Movimiento de caja agregado, actualizando datos...');
+            this.updateDisplay();
+        });
+    }
+
+    // Método público para forzar actualización desde otras partes del sistema
+    forceUpdate() {
+        console.log('🔄 [CajaManager] Actualización forzada solicitada');
+        this.updateDisplay();
     }
 
     updateDisplay() {
@@ -371,7 +441,7 @@ class CajaManager {
         const expectedCash = this.calculateExpectedCash();
         
         const modal = document.createElement('div');
-        modal.className = 'modal';
+        modal.className = 'modal active';
         modal.id = 'closeCashModal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
@@ -470,10 +540,18 @@ class CajaManager {
             // Las ventas usan 'fecha' no 'timestamp'
             const saleDate = sale.fecha || sale.timestamp;
             const sessionStart = this.currentSession.openedAt;
-            return new Date(saleDate) >= new Date(sessionStart) && sale.metodoPago === 'efectivo';
+            return new Date(saleDate) >= new Date(sessionStart);
         });
         
-        const salesCash = sessionSales.reduce((sum, sale) => sum + sale.total, 0);
+        const salesCash = sessionSales.reduce((sum, sale) => {
+            if (sale.metodoPago === 'efectivo') {
+                return sum + sale.total;
+            } else if (sale.metodoPago === 'mixto' && sale.paymentData && sale.paymentData.cashAmount) {
+                // Sumar la parte en efectivo de los pagos mixtos
+                return sum + sale.paymentData.cashAmount;
+            }
+            return sum;
+        }, 0);
         
         // Movimientos de caja
         const movements = this.currentSession.movements || [];
@@ -485,6 +563,63 @@ class CajaManager {
             .reduce((sum, m) => sum + m.amount, 0);
         
         return this.currentSession.initialAmount + salesCash + cashIn - cashOut;
+    }
+
+    calculateTransfers() {
+        if (!this.currentSession) return 0;
+        
+        // Transferencias de la sesión actual
+        const sales = this.db.getSales();
+        const sessionSales = sales.filter(sale => {
+            const saleDate = sale.fecha || sale.timestamp;
+            const sessionStart = this.currentSession.openedAt;
+            return new Date(saleDate) >= new Date(sessionStart);
+        });
+        
+        return sessionSales.reduce((sum, sale) => {
+            if (sale.metodoPago === 'transferencia') {
+                return sum + sale.total;
+            } else if (sale.metodoPago === 'mixto' && sale.paymentData && sale.paymentData.cardAmount) {
+                // Sumar la parte de transferencia de los pagos mixtos
+                return sum + sale.paymentData.cardAmount;
+            }
+            return sum;
+        }, 0);
+    }
+
+    calculateReceivedCash() {
+        if (!this.currentSession) return 0;
+        
+        // Ventas en efectivo de la sesión actual
+        const sales = this.db.getSales();
+        const sessionSales = sales.filter(sale => {
+            const saleDate = sale.fecha || sale.timestamp;
+            const sessionStart = this.currentSession.openedAt;
+            return new Date(saleDate) >= new Date(sessionStart);
+        });
+        
+        const salesCash = sessionSales.reduce((sum, sale) => {
+            if (sale.metodoPago === 'efectivo') {
+                return sum + sale.total;
+            } else if (sale.metodoPago === 'mixto' && sale.paymentData && sale.paymentData.cashAmount) {
+                // Sumar la parte de efectivo de los pagos mixtos
+                return sum + sale.paymentData.cashAmount;
+            }
+            return sum;
+        }, 0);
+        
+        // Movimientos de caja (entradas - salidas)
+        const movements = this.currentSession.movements || [];
+        const cashIn = movements
+            .filter(m => m.type === 'in')
+            .reduce((sum, m) => sum + m.amount, 0);
+        
+        const cashOut = movements
+            .filter(m => m.type === 'out')
+            .reduce((sum, m) => sum + m.amount, 0);
+        
+        // Efectivo recibido = ventas en efectivo + entradas - salidas (SIN contar la base inicial)
+        return salesCash + cashIn - cashOut;
     }
 
     closeCash() {
@@ -529,8 +664,28 @@ class CajaManager {
                 
                 <div class="cash-stats">
                     <div class="stat-card">
+                        <div class="stat-label">💵 Efectivo Recibido</div>
+                        <div class="stat-value" id="receivedCashAmount">$${this.calculateReceivedCash().toLocaleString()}</div>
+                    </div>
+                    <div class="stat-card">
                         <div class="stat-label">Efectivo en Caja</div>
                         <div class="stat-value" id="cashAmount">$${this.calculateExpectedCash().toLocaleString()}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Transferencias</div>
+                        <div class="stat-value" id="transferAmount">$0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">💰 Entradas</div>
+                        <div class="stat-value" id="movementEntradas">$0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">💸 Salidas</div>
+                        <div class="stat-value" id="movementSalidas">$0</div>
+                    </div>
+                    <div class="stat-card total-card">
+                        <div class="stat-label">Total Ingresos</div>
+                        <div class="stat-value" id="totalAmount">$${this.calculateExpectedCash().toLocaleString()}</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Ventas del Turno</div>
@@ -551,6 +706,10 @@ class CajaManager {
                         <i class="fas fa-history"></i>
                         Ver Historial
                     </button>
+                    <button class="btn btn-info" id="refreshDataBtn">
+                        <i class="fas fa-sync-alt"></i>
+                        Actualizar Datos
+                    </button>
                     <button class="btn btn-warning" id="printArqueoBtn">
                         <i class="fas fa-print"></i>
                         Imprimir Arqueo
@@ -567,8 +726,7 @@ class CajaManager {
             </div>
         `;
         
-        // Re-bind events
-        this.bindEvents();
+        console.log('🔄 [CajaManager] HTML de sesión activa generado');
     }
 
     showCashOpeningForm() {
@@ -595,8 +753,7 @@ class CajaManager {
             </div>
         `;
         
-        // Re-bind events
-        this.bindEvents();
+        console.log('🔄 [CajaManager] HTML de apertura generado');
         
         // Cargar resumen del día
         this.loadDailySummary();
@@ -604,7 +761,7 @@ class CajaManager {
 
     showClosingSummary(closedSession) {
         const modal = document.createElement('div');
-        modal.className = 'modal';
+        modal.className = 'modal active';
         modal.id = 'closingSummaryModal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
@@ -679,6 +836,18 @@ class CajaManager {
                                     <span class="label">Mixto:</span>
                                     <span class="value">$${closedSession.totalMixed.toLocaleString()}</span>
                                 </div>
+                                ${closedSession.totalMixed > 0 && (closedSession.cashFromMixed > 0 || closedSession.cardFromMixed > 0) ? `
+                                <div class="payment-breakdown">
+                                    <div class="breakdown-item">
+                                        <span class="breakdown-label">• En efectivo:</span>
+                                        <span class="breakdown-value">$${(closedSession.cashFromMixed || 0).toLocaleString()}</span>
+                                    </div>
+                                    <div class="breakdown-item">
+                                        <span class="breakdown-label">• Por transferencia:</span>
+                                        <span class="breakdown-value">$${(closedSession.cardFromMixed || 0).toLocaleString()}</span>
+                                    </div>
+                                </div>
+                                ` : ''}
                             </div>
                         </div>
                         
@@ -718,8 +887,10 @@ class CajaManager {
 
     // === MOVIMIENTOS DE CAJA ===
     showMovementModal() {
+        console.log('🚀 [CajaManager] Iniciando showMovementModal');
+        
         const modal = document.createElement('div');
-        modal.className = 'modal';
+        modal.className = 'modal active'; // Agregar 'active' para que sea visible
         modal.id = 'movementModal';
         modal.innerHTML = `
             <div class="modal-content">
@@ -771,26 +942,41 @@ class CajaManager {
         `;
         
         document.body.appendChild(modal);
+        console.log('✅ [CajaManager] Modal de movimientos agregado al DOM');
     }
 
     addMovement() {
+        console.log('[CajaManager] 🔧 Iniciando addMovement');
         try {
             const type = document.getElementById('movementType').value;
             const amount = parseFloat(document.getElementById('movementAmount').value);
             const description = document.getElementById('movementDescription').value.trim();
             
+            console.log('[CajaManager] 📊 Datos del formulario:', { type, amount, description });
+            
             if (!amount || amount <= 0) {
-                throw new Error('El monto debe ser mayor a 0');
+                console.log('[CajaManager] ❌ Monto inválido');
+                this.showNotification('El monto debe ser mayor a 0', 'error');
+                return;
             }
             
             if (!description) {
-                throw new Error('La descripción es requerida');
+                console.log('[CajaManager] ❌ Descripción vacía');
+                this.showNotification('La descripción es requerida', 'error');
+                return;
+            }
+            
+            if (description.length < 5) {
+                this.showNotification('La descripción debe tener al menos 5 caracteres', 'error');
+                return;
             }
             
             if (!this.currentUser) {
-                throw new Error('No hay usuario autenticado');
+                this.showNotification('No hay usuario autenticado', 'error');
+                return;
             }
             
+            // Agregar el movimiento
             this.db.addCashMovement(type, amount, description, this.currentUser.id);
             
             // Cerrar modal
@@ -799,9 +985,10 @@ class CajaManager {
             // Actualizar display
             this.updateDisplay();
             
+            // Mostrar mensaje de éxito
+            const typeText = type === 'in' ? 'entrada' : 'salida';
             const icon = type === 'in' ? '💰' : '💸';
-            const action = type === 'in' ? 'registrada' : 'registrada';
-            this.showNotification(`${icon} Movimiento ${action} exitosamente`, 'success');
+            this.showNotification(`${icon} ${typeText} de $${amount.toLocaleString()} registrada exitosamente`, 'success');
             
         } catch (error) {
             console.error('Error al agregar movimiento:', error);
@@ -811,11 +998,13 @@ class CajaManager {
 
     // === HISTORIAL ===
     showHistoryModal() {
+        console.log('📜 [CajaManager] Iniciando showHistoryModal');
+        
         const sessions = this.db.getCashSessions();
         const recentSessions = sessions.slice(-10).reverse(); // Últimas 10 sesiones
         
         const modal = document.createElement('div');
-        modal.className = 'modal';
+        modal.className = 'modal active'; // Agregar 'active' para que sea visible
         modal.id = 'historyModal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 900px;">
@@ -876,14 +1065,164 @@ class CajaManager {
         document.body.appendChild(modal);
     }
 
+    viewSessionDetails(sessionId) {
+        const sessions = this.db.getCashSessions();
+        const session = sessions.find(s => s.id === sessionId);
+        
+        if (!session) {
+            this.showNotification('Sesión no encontrada', 'error');
+            return;
+        }
+        
+        const modal = document.createElement('div');
+        modal.className = 'modal active';
+        modal.id = 'sessionDetailsModal';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 800px;">
+                <div class="modal-header">
+                    <h3>📊 Detalles de Sesión - ${session.userName}</h3>
+                    <button class="modal-close" onclick="this.closest('.modal').remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="session-summary">
+                        <div class="summary-grid">
+                            <div class="summary-item">
+                                <span class="label">Fecha apertura:</span>
+                                <span class="value">${new Date(session.openedAt).toLocaleString()}</span>
+                            </div>
+                            ${session.status === 'closed' ? `
+                            <div class="summary-item">
+                                <span class="label">Fecha cierre:</span>
+                                <span class="value">${new Date(session.closedAt).toLocaleString()}</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="label">Duración:</span>
+                                <span class="value">${this.calculateSessionDuration(session)}</span>
+                            </div>
+                            ` : ''}
+                            <div class="summary-item">
+                                <span class="label">Monto inicial:</span>
+                                <span class="value">$${session.initialAmount.toLocaleString()}</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="label">Total ventas:</span>
+                                <span class="value">$${session.totalSales.toLocaleString()}</span>
+                            </div>
+                            ${session.status === 'closed' ? `
+                            <div class="summary-item">
+                                <span class="label">Monto final:</span>
+                                <span class="value">$${session.finalAmount.toLocaleString()}</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="label">Diferencia:</span>
+                                <span class="value ${session.difference === 0 ? 'perfect' : session.difference > 0 ? 'surplus' : 'deficit'}">
+                                    ${session.difference >= 0 ? '+' : ''}$${session.difference.toLocaleString()}
+                                </span>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    
+                    ${session.movements && session.movements.length > 1 ? `
+                    <div class="movements-section">
+                        <h4>📝 Movimientos de Caja</h4>
+                        <div class="movements-list">
+                            ${session.movements.map(movement => `
+                                <div class="movement-detail">
+                                    <div class="movement-icon">
+                                        ${movement.type === 'opening' ? '🟢' : 
+                                          movement.type === 'closing' ? '🔴' : 
+                                          movement.type === 'in' ? '💰' : '💸'}
+                                    </div>
+                                    <div class="movement-info">
+                                        <div class="movement-description">${movement.description}</div>
+                                        <div class="movement-time">${new Date(movement.timestamp).toLocaleString()}</div>
+                                    </div>
+                                    <div class="movement-amount ${movement.type}">
+                                        ${movement.type === 'in' ? '+' : movement.type === 'out' ? '-' : ''}$${movement.amount.toLocaleString()}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    ${session.notes ? `
+                    <div class="notes-section">
+                        <h4>📝 Notas</h4>
+                        <div class="notes-content">${session.notes}</div>
+                    </div>
+                    ` : ''}
+                </div>
+                <div class="modal-footer">
+                    ${session.status === 'closed' ? `
+                    <button type="button" class="btn btn-primary" onclick="cajaManager.printClosingSummary(${session.id})">
+                        <i class="fas fa-print"></i>
+                        Imprimir Resumen
+                    </button>
+                    ` : ''}
+                    <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    }
+
     // === ACTUALIZACIÓN DE DATOS ===
     updateCashInfo() {
+        console.log('🔄 [CajaManager] Actualizando información de caja...');
+        
+        const receivedCashAmountElement = document.getElementById('receivedCashAmount');
         const cashAmountElement = document.getElementById('cashAmount');
+        const transferAmountElement = document.getElementById('transferAmount');
+        const totalAmountElement = document.getElementById('totalAmount');
         const sessionSalesElement = document.getElementById('sessionSales');
         const transactionCountElement = document.getElementById('transactionCount');
+        const movementEntradasElement = document.getElementById('movementEntradas');
+        const movementSalidasElement = document.getElementById('movementSalidas');
+        
+        const receivedCash = this.calculateReceivedCash();
+        const expectedCash = this.calculateExpectedCash();
+        const transfers = this.calculateTransfers();
+        const totalAmount = expectedCash + transfers;
+        
+        // Calcular movimientos de caja
+        const movements = this.currentSession?.movements || [];
+        const entradas = movements
+            .filter(m => m.type === 'in')
+            .reduce((sum, m) => sum + m.amount, 0);
+        
+        const salidas = movements
+            .filter(m => m.type === 'out')
+            .reduce((sum, m) => sum + m.amount, 0);
+        
+        if (receivedCashAmountElement) {
+            receivedCashAmountElement.textContent = `$${receivedCash.toLocaleString()}`;
+        }
         
         if (cashAmountElement) {
-            cashAmountElement.textContent = `$${this.calculateExpectedCash().toLocaleString()}`;
+            cashAmountElement.textContent = `$${expectedCash.toLocaleString()}`;
+        }
+        
+        if (transferAmountElement) {
+            transferAmountElement.textContent = `$${transfers.toLocaleString()}`;
+        }
+        
+        if (totalAmountElement) {
+            totalAmountElement.textContent = `$${totalAmount.toLocaleString()}`;
+        }
+        
+        if (movementEntradasElement) {
+            movementEntradasElement.textContent = `$${entradas.toLocaleString()}`;
+        }
+        
+        if (movementSalidasElement) {
+            movementSalidasElement.textContent = `$${salidas.toLocaleString()}`;
         }
         
         if (this.currentSession) {
@@ -895,13 +1234,23 @@ class CajaManager {
             
             const totalSales = sessionSales.reduce((sum, sale) => sum + sale.total, 0);
             
+            console.log(`📊 [CajaManager] Ventas de sesión: ${sessionSales.length} transacciones, $${totalSales.toLocaleString()}`);
+            
             if (sessionSalesElement) {
                 sessionSalesElement.textContent = `$${totalSales.toLocaleString()}`;
+                console.log('✅ [CajaManager] Elemento sessionSales actualizado');
+            } else {
+                console.log('❌ [CajaManager] Elemento sessionSales NO encontrado');
             }
             
             if (transactionCountElement) {
                 transactionCountElement.textContent = sessionSales.length;
+                console.log('✅ [CajaManager] Elemento transactionCount actualizado');
+            } else {
+                console.log('❌ [CajaManager] Elemento transactionCount NO encontrado');
             }
+        } else {
+            console.log('⚠️ [CajaManager] No hay sesión activa para calcular ventas');
         }
     }
 
@@ -971,7 +1320,40 @@ class CajaManager {
     }
 
     generateArqueoContent(session) {
+        const receivedCash = this.calculateReceivedCash();
         const expectedCash = this.calculateExpectedCash();
+        
+        // Calcular transferencias recibidas en la sesión
+        const sales = this.db.getSales();
+        const sessionSales = sales.filter(sale => {
+            const saleDate = sale.fecha || sale.timestamp;
+            const sessionStart = session.openedAt;
+            return new Date(saleDate) >= new Date(sessionStart);
+        });
+        
+        const transferencias = sessionSales.reduce((sum, sale) => {
+            if (sale.metodoPago === 'transferencia') {
+                return sum + sale.total;
+            } else if (sale.metodoPago === 'mixto' && sale.paymentData && sale.paymentData.cardAmount) {
+                // Sumar la parte de transferencia de los pagos mixtos
+                return sum + sale.paymentData.cardAmount;
+            }
+            return sum;
+        }, 0);
+        
+        // Calcular movimientos de caja (entradas y salidas)
+        const movements = session.movements || [];
+        const entradas = movements
+            .filter(m => m.type === 'in')
+            .reduce((sum, m) => sum + m.amount, 0);
+        
+        const salidas = movements
+            .filter(m => m.type === 'out')
+            .reduce((sum, m) => sum + m.amount, 0);
+        
+        const netMovements = entradas - salidas;
+        
+        const montoTotal = expectedCash + transferencias;
         
         return `
             <!DOCTYPE html>
@@ -984,6 +1366,7 @@ class CajaManager {
                     .info-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
                     .info-table th, .info-table td { padding: 8px; border: 1px solid #ddd; text-align: left; }
                     .total { font-weight: bold; font-size: 16px; }
+                    .highlight { background-color: #e8f5e8; font-weight: bold; }
                     @media print { body { margin: 0; } }
                 </style>
             </head>
@@ -998,11 +1381,36 @@ class CajaManager {
                     <tr><th>Cajero:</th><td>${session.userName}</td></tr>
                     <tr><th>Apertura:</th><td>${new Date(session.openedAt).toLocaleString()}</td></tr>
                     <tr><th>Monto inicial:</th><td>$${session.initialAmount.toLocaleString()}</td></tr>
+                    <tr style="background-color: #e8f4fd;"><th>💵 Efectivo recibido:</th><td>$${receivedCash.toLocaleString()}</td></tr>
                     <tr><th>Efectivo esperado:</th><td>$${expectedCash.toLocaleString()}</td></tr>
+                    <tr><th>Transferencias recibidas:</th><td>$${transferencias.toLocaleString()}</td></tr>
+                    <tr style="background-color: #f0f8ff;"><th>💰 Entradas de caja:</th><td>+$${entradas.toLocaleString()}</td></tr>
+                    <tr style="background-color: #fff0f0;"><th>💸 Salidas de caja:</th><td>-$${salidas.toLocaleString()}</td></tr>
+                    <tr style="background-color: #f8f8f8;"><th>🔄 Movimientos netos:</th><td>${netMovements >= 0 ? '+' : ''}$${netMovements.toLocaleString()}</td></tr>
+                    <tr class="highlight"><th>Monto total (Efectivo + Transferencias):</th><td>$${montoTotal.toLocaleString()}</td></tr>
                     <tr><th>Estado:</th><td>${session.status === 'open' ? 'Abierta' : 'Cerrada'}</td></tr>
                 </table>
                 
+                ${movements.length > 0 ? `
+                <h3>📝 Detalle de Movimientos de Caja</h3>
+                <table class="info-table">
+                    <tr><th>Hora</th><th>Tipo</th><th>Monto</th><th>Descripción</th></tr>
+                    ${movements.map(movement => `
+                        <tr>
+                            <td>${new Date(movement.timestamp).toLocaleTimeString()}</td>
+                            <td>${movement.type === 'in' ? '💰 Entrada' : movement.type === 'out' ? '💸 Salida' : movement.type === 'opening' ? '🟢 Apertura' : '🔴 Cierre'}</td>
+                            <td>${movement.type === 'out' ? '-' : '+'}$${movement.amount.toLocaleString()}</td>
+                            <td>${movement.description}</td>
+                        </tr>
+                    `).join('')}
+                </table>
+                ` : ''}
+                
                 <p><strong>Nota:</strong> Este documento es un arqueo de caja en tiempo real.</p>
+                <p><strong>Efectivo recibido:</strong> Dinero en efectivo generado durante la sesión (ventas + entradas - salidas) SIN incluir la base inicial</p>
+                <p><strong>Efectivo esperado:</strong> Incluye monto inicial + ventas en efectivo + parte efectivo de pagos mixtos + entradas - salidas</p>
+                <p><strong>Transferencias:</strong> Incluye ventas por transferencia + parte transferencia de pagos mixtos</p>
+                <p><strong>Movimientos de caja:</strong> Registra todas las entradas y salidas de dinero adicionales a las ventas</p>
             </body>
             </html>
         `;
@@ -1093,7 +1501,19 @@ let cajaManager;
 
 // Inicializar cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('🔄 [DOMContentLoaded] Iniciando verificación...');
+    
+    // Evitar múltiples instancias
+    if (cajaManager) {
+        console.log('⚠️ [DOMContentLoaded] CajaManager ya existe, saltando inicialización');
+        return;
+    }
+    
     if (document.getElementById('cashContainer')) {
+        console.log('✅ [DOMContentLoaded] cashContainer encontrado, creando CajaManager');
         cajaManager = new CajaManager();
+        console.log('✅ [DOMContentLoaded] CajaManager creado exitosamente');
+    } else {
+        console.log('❌ [DOMContentLoaded] cashContainer NO encontrado');
     }
 });

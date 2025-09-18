@@ -209,6 +209,40 @@ class ReportesManager {
                 ${methods.map(method => {
                     const data = paymentData[method];
                     const percentage = data.percentage || 0;
+                    
+                    // Desglose especial para pagos mixtos
+                    if (method === 'mixto' && data.cashPart > 0 && data.cardPart > 0) {
+                        const cashPercentage = total > 0 ? (data.cashPart / total) * 100 : 0;
+                        const cardPercentage = total > 0 ? (data.cardPart / total) * 100 : 0;
+                        
+                        return `
+                            <div class="payment-method">
+                                <div class="payment-header">
+                                    <span class="payment-name">${this.getPaymentMethodLabel(method)}</span>
+                                    <span class="payment-percentage">${percentage.toFixed(1)}%</span>
+                                </div>
+                                <div class="payment-bar">
+                                    <div class="payment-fill" style="width: ${percentage}%; background: ${this.getPaymentMethodColor(method)}"></div>
+                                </div>
+                                <div class="payment-details">
+                                    <span>$${data.total.toLocaleString()}</span>
+                                    <span>${data.count} transacciones</span>
+                                    <span>Promedio: $${Math.round(data.avgTicket).toLocaleString()}</span>
+                                </div>
+                                <div class="payment-breakdown">
+                                    <div class="breakdown-item">
+                                        <span class="breakdown-label">• Efectivo:</span>
+                                        <span class="breakdown-value">$${data.cashPart.toLocaleString()} (${cashPercentage.toFixed(1)}%)</span>
+                                    </div>
+                                    <div class="breakdown-item">
+                                        <span class="breakdown-label">• Transferencia:</span>
+                                        <span class="breakdown-value">$${data.cardPart.toLocaleString()} (${cardPercentage.toFixed(1)}%)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
                     return `
                         <div class="payment-method">
                             <div class="payment-header">
