@@ -221,6 +221,10 @@ class MesasManager {
                     <i class="fas fa-eye"></i>
                     Ver Pedido
                 </button>
+                <button class="action-btn move" onclick="mesasManager.showMoveTableModal(${table.numero})">
+                    <i class="fas fa-exchange-alt"></i>
+                    Mover Mesa
+                </button>
                 <button class="action-btn bill" onclick="mesasManager.showBillModal(${table.numero})">
                     <i class="fas fa-receipt"></i>
                     Sacar Cuenta
@@ -444,6 +448,16 @@ class MesasManager {
                 return;
             }
 
+            // Validar y normalizar los datos del pedido
+            const normalizedOrder = this.normalizeOrderData(order);
+            console.log('[MesasManager] Pedido normalizado:', normalizedOrder);
+            
+            if (!normalizedOrder.items || normalizedOrder.items.length === 0) {
+                console.log('[MesasManager] El pedido no tiene items válidos');
+                this.showNotification('El pedido no tiene productos válidos para mostrar', 'warning');
+                return;
+            }
+
             const modal = document.createElement('div');
             modal.className = 'bill-modal';
             modal.style.cssText = `
@@ -480,12 +494,12 @@ class MesasManager {
                 ">
                     <h2 style="margin: 0 0 8px 0; color: #ff6b35; font-size: 24px;">CRÊPES & KAFFEE</h2>
                     <p style="margin: 0; color: #666; font-size: 14px;">Cuenta de Mesa ${tableNumber}</p>
-                    <p style="margin: 4px 0 0 0; color: #666; font-size: 12px;">Pedido #${order.id} • ${currentDate} ${currentTime}</p>
+                    <p style="margin: 4px 0 0 0; color: #666; font-size: 12px;">Pedido #${normalizedOrder.id} • ${currentDate} ${currentTime}</p>
                 </div>
                 
                 <div style="padding: 24px; max-height: 400px; overflow-y: auto;">
                     <div class="bill-items" style="margin-bottom: 20px;">
-                        ${order.items.map(item => `
+                        ${normalizedOrder.items.map(item => `
                             <div style="
                                 display: flex;
                                 justify-content: space-between;
@@ -522,7 +536,7 @@ class MesasManager {
                             color: #2d3748;
                         ">
                             <span>TOTAL A PAGAR:</span>
-                            <span style="color: #ff6b35;">$${order.total.toLocaleString()}</span>
+                            <span style="color: #ff6b35;">$${normalizedOrder.total.toLocaleString()}</span>
                         </div>
                     </div>
                     
@@ -612,10 +626,76 @@ class MesasManager {
         }
     }
 
+    normalizeOrderData(order) {
+        console.log('[MesasManager] Normalizando datos del pedido:', order);
+        
+        try {
+            // Crear una copia del pedido para no modificar el original
+            const normalizedOrder = { ...order };
+            
+            // Validar y normalizar propiedades básicas
+            normalizedOrder.id = order.id || 'N/A';
+            normalizedOrder.total = Number(order.total) || 0;
+            
+            // Validar y normalizar items
+            if (!order.items || !Array.isArray(order.items)) {
+                console.warn('[MesasManager] Items no válidos en el pedido:', order.items);
+                normalizedOrder.items = [];
+                normalizedOrder.total = 0;
+                return normalizedOrder;
+            }
+            
+            // Normalizar cada item
+            normalizedOrder.items = order.items.map((item, index) => {
+                console.log(`[MesasManager] Normalizando item ${index}:`, item);
+                
+                const normalizedItem = {
+                    productName: item.productName || item.nombre || item.name || 'Producto desconocido',
+                    quantity: Number(item.quantity || item.cantidad) || 1,
+                    price: Number(item.price || item.precio || item.unitPrice) || 0,
+                    subtotal: Number(item.subtotal) || 0
+                };
+                
+                // Si no hay subtotal calculado, calcularlo
+                if (normalizedItem.subtotal === 0) {
+                    normalizedItem.subtotal = normalizedItem.quantity * normalizedItem.price;
+                }
+                
+                console.log(`[MesasManager] Item normalizado ${index}:`, normalizedItem);
+                return normalizedItem;
+            }).filter(item => item.quantity > 0); // Filtrar items sin cantidad
+            
+            // Recalcular total si es necesario
+            if (normalizedOrder.total === 0 && normalizedOrder.items.length > 0) {
+                normalizedOrder.total = normalizedOrder.items.reduce((sum, item) => sum + item.subtotal, 0);
+            }
+            
+            console.log('[MesasManager] Pedido normalizado completo:', normalizedOrder);
+            return normalizedOrder;
+            
+        } catch (error) {
+            console.error('[MesasManager] Error normalizando datos del pedido:', error);
+            // Devolver estructura mínima válida en caso de error
+            return {
+                id: order.id || 'ERROR',
+                items: [],
+                total: 0
+            };
+        }
+    }
+
     printBill(tableNumber) {
         const order = this.getTableOrder(tableNumber);
         if (!order) {
             this.showNotification('No hay pedido para imprimir', 'warning');
+            return;
+        }
+
+        // Normalizar datos del pedido
+        const normalizedOrder = this.normalizeOrderData(order);
+        
+        if (!normalizedOrder.items || normalizedOrder.items.length === 0) {
+            this.showNotification('El pedido no tiene productos válidos para imprimir', 'warning');
             return;
         }
 
@@ -678,12 +758,12 @@ class MesasManager {
                 <div class="header">
                     <h2>CRÊPES & KAFFEE</h2>
                     <p>Mesa ${tableNumber}</p>
-                    <p>Pedido #${order.id}</p>
+                    <p>Pedido #${normalizedOrder.id}</p>
                     <p>${currentDate} - ${currentTime}</p>
                 </div>
                 
                 <div class="items">
-                    ${order.items.map(item => `
+                    ${normalizedOrder.items.map(item => `
                         <div class="item">
                             <div class="item-name">
                                 ${item.quantity}x ${item.productName}<br>
@@ -697,7 +777,7 @@ class MesasManager {
                 <div class="total">
                     <div class="item">
                         <span>TOTAL A PAGAR:</span>
-                        <span>$${order.total.toLocaleString()}</span>
+                        <span>$${normalizedOrder.total.toLocaleString()}</span>
                     </div>
                 </div>
                 
@@ -730,6 +810,14 @@ class MesasManager {
         const order = this.getTableOrder(tableNumber);
         if (!order) {
             this.showNotification('No hay pedido para procesar el pago', 'warning');
+            return;
+        }
+
+        // Normalizar datos del pedido
+        const normalizedOrder = this.normalizeOrderData(order);
+        
+        if (!normalizedOrder.items || normalizedOrder.items.length === 0) {
+            this.showNotification('El pedido no tiene productos válidos para procesar el pago', 'warning');
             return;
         }
 
@@ -772,7 +860,7 @@ class MesasManager {
                 ">
                     <div>
                         <h2 style="margin: 0; font-size: 24px;">Procesar Pago</h2>
-                        <p style="margin: 5px 0 0 0; opacity: 0.9;">Mesa ${tableNumber} - Pedido #${order.id}</p>
+                        <p style="margin: 5px 0 0 0; opacity: 0.9;">Mesa ${tableNumber} - Pedido #${normalizedOrder.id}</p>
                     </div>
                     <button class="close-modal" style="
                         background: rgba(255, 255, 255, 0.2);
@@ -811,7 +899,7 @@ class MesasManager {
                         ">
                             <p style="margin: 0 0 8px 0; color: #7f1d1d; font-weight: 600;">Total a Pagar</p>
                             <div style="font-size: 32px; font-weight: bold; color: #dc2626;">
-                                $${order.total.toLocaleString()}
+                                $${normalizedOrder.total.toLocaleString()}
                             </div>
                         </div>
 
@@ -861,7 +949,7 @@ class MesasManager {
                             ">
                                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                                     <span style="color: #166534; font-weight: 500;">Total a Pagar:</span>
-                                    <span style="color: #166534; font-weight: bold;">$${order.total.toLocaleString()}</span>
+                                    <span style="color: #166534; font-weight: bold;">$${normalizedOrder.total.toLocaleString()}</span>
                                 </div>
                                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                                     <span style="color: #166534; font-weight: 500;">Dinero Recibido:</span>
@@ -931,7 +1019,7 @@ class MesasManager {
                         </div>
 
                         <div class="order-items" style="margin-bottom: 20px;">
-                            ${order.items.map(item => `
+                            ${normalizedOrder.items.map(item => `
                                 <div style="
                                     display: flex;
                                     justify-content: space-between;
@@ -989,7 +1077,7 @@ class MesasManager {
                     ">
                         Cancelar
                     </button>
-                    <button id="processPaymentBtn" onclick="mesasManager.processPayment(${tableNumber}, ${order.id})" style="
+                    <button id="processPaymentBtn" onclick="mesasManager.processPayment(${tableNumber}, ${normalizedOrder.id})" style="
                         padding: 12px 24px;
                         background: #10b981;
                         border: 1px solid #10b981;
@@ -1053,7 +1141,7 @@ class MesasManager {
         if (receivedInput) {
             receivedInput.addEventListener('input', (e) => {
                 const received = parseFloat(e.target.value) || 0;
-                const total = order.total;
+                const total = normalizedOrder.total;
                 const change = Math.max(0, received - total);
                 
                 displayReceived.textContent = `$${received.toLocaleString()}`;
@@ -1082,9 +1170,9 @@ class MesasManager {
                 
                 mixedTotal.textContent = `$${total.toLocaleString()}`;
                 
-                if (total < order.total) {
+                if (total < normalizedOrder.total) {
                     mixedTotal.style.color = '#dc2626';
-                } else if (total === order.total) {
+                } else if (total === normalizedOrder.total) {
                     mixedTotal.style.color = '#059669';
                 } else {
                     mixedTotal.style.color = '#f59e0b';
@@ -1518,6 +1606,242 @@ class MesasManager {
             this.loadTables();
             this.updateStats();
             this.showNotification(`Mesa ${tableNumber} limpia y disponible`, 'success');
+        }
+    }
+
+    showMoveTableModal(currentTableNumber) {
+        const order = this.getTableOrder(currentTableNumber);
+        if (!order) {
+            this.showNotification('No hay pedido para mover', 'warning');
+            return;
+        }
+
+        // Obtener mesas disponibles
+        const availableTables = this.tables.filter(table => 
+            table.numero != currentTableNumber && table.estado === 'libre'
+        );
+
+        if (availableTables.length === 0) {
+            this.showNotification('No hay mesas disponibles para mover el pedido', 'warning');
+            return;
+        }
+
+        const modal = document.createElement('div');
+        modal.className = 'move-table-modal';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        `;
+
+        modal.innerHTML = `
+            <div class="modal-content" style="
+                background: white;
+                border-radius: 16px;
+                padding: 24px;
+                max-width: 500px;
+                width: 90%;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            ">
+                <div class="modal-header" style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 20px;
+                    padding-bottom: 16px;
+                    border-bottom: 1px solid #e2e8f0;
+                ">
+                    <h2 style="margin: 0; color: #2d3748;">
+                        <i class="fas fa-exchange-alt"></i>
+                        Mover Pedido
+                    </h2>
+                    <button class="close-modal" style="
+                        background: #f3f4f6;
+                        border: none;
+                        border-radius: 50%;
+                        width: 32px;
+                        height: 32px;
+                        font-size: 18px;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    ">&times;</button>
+                </div>
+                
+                <div class="move-info" style="margin-bottom: 20px;">
+                    <div style="
+                        background: #fff8e6;
+                        border: 1px solid #ffd700;
+                        border-radius: 8px;
+                        padding: 16px;
+                        margin-bottom: 16px;
+                    ">
+                        <h4 style="margin: 0 0 8px 0; color: #b45309;">
+                            <i class="fas fa-info-circle"></i>
+                            Información del Pedido
+                        </h4>
+                        <p style="margin: 4px 0;"><strong>Mesa actual:</strong> ${currentTableNumber}</p>
+                        <p style="margin: 4px 0;"><strong>Pedido #:</strong> ${order.id}</p>
+                        <p style="margin: 4px 0;"><strong>Total:</strong> $${order.total.toLocaleString()}</p>
+                        <p style="margin: 4px 0;"><strong>Estado:</strong> ${this.getOrderStatusLabel(order.estado)}</p>
+                    </div>
+                    
+                    <div style="margin-bottom: 16px;">
+                        <label style="
+                            display: block;
+                            margin-bottom: 8px;
+                            font-weight: 600;
+                            color: #2d3748;
+                        ">
+                            <i class="fas fa-chair"></i>
+                            Seleccionar mesa destino:
+                        </label>
+                        <select id="targetTable" style="
+                            width: 100%;
+                            padding: 12px;
+                            border: 1px solid #d1d5db;
+                            border-radius: 8px;
+                            font-size: 16px;
+                            background: white;
+                        ">
+                            <option value="">-- Seleccione una mesa --</option>
+                            ${availableTables.map(table => `
+                                <option value="${table.numero}">
+                                    Mesa ${table.numero} ${table.capacidad ? `(${table.capacidad} personas)` : ''}
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="modal-actions" style="
+                    display: flex;
+                    gap: 12px;
+                    justify-content: flex-end;
+                ">
+                    <button onclick="this.closest('.move-table-modal').remove()" style="
+                        padding: 12px 20px;
+                        background: #f3f4f6;
+                        border: 1px solid #d1d5db;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        font-weight: 500;
+                    ">
+                        <i class="fas fa-times"></i>
+                        Cancelar
+                    </button>
+                    <button onclick="mesasManager.moveTable(${currentTableNumber})" style="
+                        padding: 12px 20px;
+                        background: #10b981;
+                        border: 1px solid #10b981;
+                        color: white;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        font-weight: 500;
+                    ">
+                        <i class="fas fa-exchange-alt"></i>
+                        Mover Pedido
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Event listeners
+        modal.querySelector('.close-modal').addEventListener('click', () => {
+            modal.remove();
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+
+        // Focus en el select
+        setTimeout(() => {
+            document.getElementById('targetTable').focus();
+        }, 100);
+    }
+
+    moveTable(currentTableNumber) {
+        const targetTableSelect = document.getElementById('targetTable');
+        const targetTableNumber = parseInt(targetTableSelect.value);
+
+        if (!targetTableNumber) {
+            this.showNotification('Debe seleccionar una mesa destino', 'error');
+            return;
+        }
+
+        try {
+            // Obtener el pedido actual
+            const order = this.getTableOrder(currentTableNumber);
+            if (!order) {
+                this.showNotification('No se encontró el pedido para mover', 'error');
+                return;
+            }
+
+            // Actualizar el pedido con la nueva mesa
+            const orders = this.db.getOrders();
+            const orderIndex = orders.findIndex(o => o.id === order.id);
+            
+            if (orderIndex !== -1) {
+                orders[orderIndex].mesa = targetTableNumber;
+                this.db.saveOrders(orders);
+                
+                // Actualizar estado de las mesas
+                const tables = this.db.getTables();
+                
+                // Liberar mesa actual
+                const currentTable = tables.find(t => t.numero == currentTableNumber);
+                if (currentTable) {
+                    currentTable.estado = 'limpieza';
+                    currentTable.pedidoId = null;
+                    this.db.updateTable(currentTable.id, currentTable);
+                }
+                
+                // Ocupar mesa destino
+                const targetTable = tables.find(t => t.numero == targetTableNumber);
+                if (targetTable) {
+                    targetTable.estado = 'ocupada';
+                    targetTable.pedidoId = order.id;
+                    targetTable.ultimaActividad = new Date().toISOString();
+                    this.db.updateTable(targetTable.id, targetTable);
+                }
+                
+                // Cerrar modal
+                document.querySelector('.move-table-modal').remove();
+                
+                // Recargar mesas y mostrar notificación
+                this.loadTables();
+                this.updateStats();
+                this.showNotification(
+                    `Pedido #${order.id} movido exitosamente de Mesa ${currentTableNumber} a Mesa ${targetTableNumber}`, 
+                    'success'
+                );
+                
+            } else {
+                this.showNotification('Error: No se pudo encontrar el pedido en la base de datos', 'error');
+            }
+            
+        } catch (error) {
+            console.error('Error al mover pedido:', error);
+            this.showNotification('Error al mover el pedido: ' + error.message, 'error');
         }
     }
 
