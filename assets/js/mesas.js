@@ -225,7 +225,7 @@ class MesasManager {
                     <i class="fas fa-exchange-alt"></i>
                     Mover Mesa
                 </button>
-                <button class="action-btn bill" onclick="mesasManager.showBillModal(${table.numero})">
+                <button class="action-btn bill" onclick="mesasManager.printBill(${table.numero})">
                     <i class="fas fa-receipt"></i>
                     Sacar Cuenta
                 </button>
@@ -481,47 +481,53 @@ class MesasManager {
                 background: white;
                 border-radius: 16px;
                 padding: 0;
-                max-width: 500px;
-                width: 90%;
-                max-height: 80vh;
-                overflow: hidden;
+                max-width: 700px;
+                width: 95%;
+                max-height: 85vh;
+                display: flex;
+                flex-direction: column;
                 box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
             ">
                 <div class="modal-header" style="
                     padding: 24px 24px 16px 24px;
                     border-bottom: 1px solid #e2e8f0;
                     text-align: center;
+                    flex-shrink: 0;
                 ">
                     <h2 style="margin: 0 0 8px 0; color: #ff6b35; font-size: 24px;">CRÊPES & KAFFEE</h2>
                     <p style="margin: 0; color: #666; font-size: 14px;">Cuenta de Mesa ${tableNumber}</p>
                     <p style="margin: 4px 0 0 0; color: #666; font-size: 12px;">Pedido #${normalizedOrder.id} • ${currentDate} ${currentTime}</p>
                 </div>
                 
-                <div style="padding: 24px; max-height: 400px; overflow-y: auto;">
-                    <div class="bill-items" style="margin-bottom: 20px;">
+                <!-- Área de productos con scroll independiente -->
+                <div style="padding: 24px 24px 0 24px; flex: 1; overflow: hidden;">
+                    <div class="bill-items" style="max-height: 300px; overflow-y: auto; margin-bottom: 20px; padding-right: 8px;">
                         ${normalizedOrder.items.map(item => `
                             <div style="
                                 display: flex;
                                 justify-content: space-between;
                                 align-items: center;
-                                padding: 12px 0;
+                                padding: 14px 0;
                                 border-bottom: 1px solid #f1f1f1;
                             ">
                                 <div style="flex: 1;">
-                                    <div style="font-weight: 600; color: #2d3748; margin-bottom: 4px;">
+                                    <div style="font-weight: 600; color: #2d3748; margin-bottom: 6px; font-size: 16px;">
                                         ${item.quantity}x ${item.productName}
                                     </div>
-                                    <div style="font-size: 12px; color: #666;">
+                                    <div style="font-size: 14px; color: #666;">
                                         $${item.price.toLocaleString()} c/u
                                     </div>
                                 </div>
-                                <div style="font-weight: 600; color: #2d3748; font-size: 16px;">
+                                <div style="font-weight: 600; color: #2d3748; font-size: 18px;">
                                     $${item.subtotal.toLocaleString()}
                                 </div>
                             </div>
                         `).join('')}
                     </div>
-                    
+                </div>
+                
+                <!-- Total y mensaje siempre visibles -->
+                <div style="padding: 0 24px 24px 24px; flex-shrink: 0;">
                     <div class="bill-total" style="
                         border-top: 2px solid #ff6b35;
                         padding-top: 16px;
@@ -531,7 +537,7 @@ class MesasManager {
                             display: flex;
                             justify-content: space-between;
                             align-items: center;
-                            font-size: 20px;
+                            font-size: 24px;
                             font-weight: bold;
                             color: #2d3748;
                         ">
@@ -555,14 +561,15 @@ class MesasManager {
                 </div>
                 
                 <div class="modal-footer" style="
-                    padding: 16px 24px;
+                    padding: 20px 24px;
                     border-top: 1px solid #e2e8f0;
                     display: flex;
                     gap: 12px;
                     justify-content: space-between;
+                    flex-shrink: 0;
                 ">
                     <button onclick="mesasManager.printBill(${tableNumber})" style="
-                        padding: 12px 20px;
+                        padding: 14px 24px;
                         background: #f3f4f6;
                         border: 1px solid #d1d5db;
                         border-radius: 8px;
@@ -571,13 +578,14 @@ class MesasManager {
                         align-items: center;
                         gap: 8px;
                         font-weight: 500;
+                        font-size: 14px;
                     ">
                         <i class="fas fa-print"></i>
                         Imprimir
                     </button>
                     <div style="display: flex; gap: 12px;">
                         <button onclick="mesasManager.showPaymentModal(${tableNumber}); this.closest('.bill-modal').remove();" style="
-                            padding: 12px 20px;
+                            padding: 14px 24px;
                             background: #10b981;
                             border: 1px solid #10b981;
                             color: white;
@@ -587,12 +595,13 @@ class MesasManager {
                             align-items: center;
                             gap: 8px;
                             font-weight: 500;
+                            font-size: 14px;
                         ">
                             <i class="fas fa-credit-card"></i>
                             Proceder al Pago
                         </button>
                         <button onclick="this.closest('.bill-modal').remove()" style="
-                            padding: 12px 20px;
+                            padding: 14px 24px;
                             background: #6b7280;
                             border: 1px solid #6b7280;
                             color: white;
@@ -602,6 +611,7 @@ class MesasManager {
                             align-items: center;
                             gap: 8px;
                             font-weight: 500;
+                            font-size: 14px;
                         ">
                             <i class="fas fa-times"></i>
                             Cerrar

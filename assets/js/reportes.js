@@ -490,14 +490,17 @@ class ReportesManager {
     }
 
     printReport(summary) {
-        const printContent = this.generatePrintableReport(summary);
+        // Obtener TODOS los productos vendidos (no solo top 5)
+        const allProductsSold = this.db.getTopSellingProducts(1000, new Date(summary.period.startDate), new Date(summary.period.endDate));
+        
+        const printContent = this.generatePrintableReport(summary, allProductsSold);
         const printWindow = window.open('', '_blank');
         printWindow.document.write(printContent);
         printWindow.document.close();
         printWindow.print();
     }
 
-    generatePrintableReport(summary) {
+    generatePrintableReport(summary, allProductsSold = null) {
         return `
             <!DOCTYPE html>
             <html>
@@ -575,6 +578,40 @@ class ReportesManager {
                         </tbody>
                     </table>
                 </div>
+                
+                ${allProductsSold && allProductsSold.length > 0 ? `
+                <div class="section">
+                    <h3>Detalle Completo de Productos Vendidos</h3>
+                    <p><em>Todos los productos vendidos en el período (${allProductsSold.length} productos diferentes)</em></p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Cantidad</th>
+                                <th>Ingresos</th>
+                                <th>Ganancia</th>
+                                <th>Margen</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${allProductsSold.map(product => {
+                                const margin = product.revenue > 0 ? (product.profit / product.revenue) * 100 : 0;
+                                return `
+                                    <tr>
+                                        <td>${product.productName}</td>
+                                        <td>${product.quantitySold}</td>
+                                        <td>$${product.revenue.toLocaleString()}</td>
+                                        <td class="${product.profit >= 0 ? 'positive' : 'negative'}">
+                                            $${product.profit.toLocaleString()}
+                                        </td>
+                                        <td>${margin.toFixed(1)}%</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                ` : ''}
             </body>
             </html>
         `;

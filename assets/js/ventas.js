@@ -14,6 +14,12 @@ class SalesManager {
             type: 'dine-in'
         };
         this.db = new Database();
+        
+        // Propiedades para edición restringida
+        this.editingRestrictedOrder = false;
+        this.originalOrderState = null;
+        this.currentEditingOrderId = null;
+        
         this.init();
     }
 
@@ -338,6 +344,15 @@ class SalesManager {
         console.log('removeFromCart - Eliminando producto:', productId);
         console.log('removeFromCart - Carrito antes:', this.cart);
         
+        // Verificar si se puede eliminar en pedidos restringidos
+        if (this.editingRestrictedOrder) {
+            this.showNotification(
+                `No se pueden eliminar productos de un pedido ${this.originalOrderState}. Solo se pueden agregar productos adicionales.`, 
+                'error'
+            );
+            return;
+        }
+        
         this.cart = this.cart.filter(item => item.product.id !== productId);
         
         console.log('removeFromCart - Carrito después:', this.cart);
@@ -353,6 +368,14 @@ class SalesManager {
         const item = this.cart.find(item => item.product.id === productId);
         if (item) {
             if (newQuantity <= 0) {
+                // En pedidos restringidos, no permitir reducir a 0 (eliminar)
+                if (this.editingRestrictedOrder) {
+                    this.showNotification(
+                        `No se pueden eliminar productos de un pedido ${this.originalOrderState}. Cantidad mínima: 1`, 
+                        'error'
+                    );
+                    return;
+                }
                 this.removeFromCart(productId);
             } else {
                 item.quantity = newQuantity;
@@ -392,14 +415,23 @@ class SalesManager {
                 </div>
             `;
         } else {
-            cartContainer.innerHTML = this.cart.map(item => `
+            cartContainer.innerHTML = this.cart.map(item => {
+                const isRestricted = this.editingRestrictedOrder;
+                const minusButtonClass = isRestricted ? 'quantity-btn minus disabled' : 'quantity-btn minus';
+                const removeButtonClass = isRestricted ? 'remove-item disabled' : 'remove-item';
+                const minusOnClick = isRestricted ? '' : `onclick="salesManager.updateQuantity(${item.product.id}, ${item.quantity - 1})"`;
+                const removeOnClick = isRestricted ? '' : `onclick="salesManager.removeFromCart(${item.product.id})"`;
+                const removeTitle = isRestricted ? `title="No se pueden eliminar productos de pedidos ${this.originalOrderState}"` : '';
+                const minusTitle = isRestricted ? `title="No se puede reducir cantidad en pedidos ${this.originalOrderState}"` : '';
+                
+                return `
                 <div class="cart-item" data-product-id="${item.product.id}">
                     <div class="item-info">
                         <h5>${item.product.nombre || item.product.name}</h5>
                         <p class="item-price">$${(item.product.precio || item.product.price).toLocaleString()}</p>
                     </div>
                     <div class="item-controls">
-                        <button class="quantity-btn minus" onclick="salesManager.updateQuantity(${item.product.id}, ${item.quantity - 1})">
+                        <button class="${minusButtonClass}" ${minusOnClick} ${minusTitle}>
                             <i class="fas fa-minus"></i>
                         </button>
                         <span class="quantity">${item.quantity}</span>
@@ -408,11 +440,12 @@ class SalesManager {
                         </button>
                     </div>
                     <div class="item-subtotal">$${item.subtotal.toLocaleString()}</div>
-                    <button class="remove-item" onclick="salesManager.removeFromCart(${item.product.id})">
+                    <button class="${removeButtonClass}" ${removeOnClick} ${removeTitle}>
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         if (sendOrderBtn) {
@@ -494,6 +527,12 @@ class SalesManager {
         
         if (confirm('¿Estás seguro de que deseas vaciar el carrito?')) {
             this.cart = [];
+            
+            // Limpiar restricciones de edición
+            this.editingRestrictedOrder = false;
+            this.originalOrderState = null;
+            this.currentEditingOrderId = null;
+            
             this.updateCartDisplay();
             this.showNotification('Carrito vaciado', 'info');
         }
@@ -624,6 +663,11 @@ class SalesManager {
         this.cart = [];
         this.currentOrder.table = null;
         
+        // Limpiar restricciones de edición después de actualización exitosa
+        this.editingRestrictedOrder = false;
+        this.originalOrderState = null;
+        this.currentEditingOrderId = null;
+        
         document.querySelectorAll('.table-btn').forEach(btn => 
             btn.classList.remove('selected'));
         
@@ -691,10 +735,25 @@ class SalesManager {
             console.log('Pedido encontrado:', order);
 
             // Verificar si se puede editar
-            const nonEditableStates = ['pagado', 'cancelado', 'entregado'];
-            if (nonEditableStates.includes(order.estado)) {
+            const fullyBlockedStates = ['pagado', 'cancelado'];
+            const restrictedStates = ['entregado', 'listo'];
+            
+            if (fullyBlockedStates.includes(order.estado)) {
                 this.showNotification(`No se puede editar un pedido ${order.estado}`, 'error');
                 return;
+            }
+
+            // Para pedidos entregados o listos, permitir agregar pero no eliminar
+            if (restrictedStates.includes(order.estado)) {
+                this.editingRestrictedOrder = true;
+                this.originalOrderState = order.estado;
+                this.showNotification(
+                    `Editando pedido ${order.estado}: Puede agregar productos pero no eliminar los existentes`, 
+                    'warning'
+                );
+            } else {
+                this.editingRestrictedOrder = false;
+                this.originalOrderState = null;
             }
 
             // Advertencia para items en preparación
