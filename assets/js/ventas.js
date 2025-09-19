@@ -500,6 +500,16 @@ class SalesManager {
     }
 
     sendOrder() {
+        console.log('=== ENVIANDO PEDIDO NUEVO ===');
+        console.log('sendOrder - currentEditingOrderId:', this.currentEditingOrderId);
+        
+        // Verificar si estamos en modo edición (no debería enviar pedido nuevo)
+        if (this.currentEditingOrderId) {
+            console.warn('ADVERTENCIA: sendOrder ejecutado mientras está en modo edición');
+            console.warn('Se debería ejecutar updateOrder en su lugar');
+            return;
+        }
+
         // Verificar que la caja esté abierta antes de permitir crear pedidos
         if (!window.auth || !window.auth.isCashSessionActive()) {
             if (window.auth && window.auth.showCashClosedNotification) {
@@ -610,13 +620,44 @@ class SalesManager {
         this.removeEditingMode();
     }
 
+    clearOrderFormWithoutExitingEditMode() {
+        this.cart = [];
+        this.currentOrder.table = null;
+        
+        document.querySelectorAll('.table-btn').forEach(btn => 
+            btn.classList.remove('selected'));
+        
+        document.querySelectorAll('.order-type-btn').forEach(btn => 
+            btn.classList.remove('active'));
+        const defaultTypeBtn = document.querySelector('.order-type-btn[data-type="dine-in"]');
+        if (defaultTypeBtn) {
+            defaultTypeBtn.classList.add('active');
+        }
+        
+        this.currentOrder.type = 'dine-in';
+        this.updateCartDisplay();
+        this.updateTableSelection();
+        
+        // NO llamar removeEditingMode() para mantener el modo de edición
+    }
+
     removeEditingMode() {
         // Restaurar botón original si está en modo de edición
         const confirmBtn = document.getElementById('confirmOrderBtn');
         if (confirmBtn) {
-            confirmBtn.innerHTML = '<i class="fas fa-check"></i> Confirmar Orden';
-            confirmBtn.onclick = () => this.sendOrder();
+            // Limpiar listeners previos clonando el botón
+            const newBtn = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
+            
+            // Configurar para modo normal
+            newBtn.innerHTML = '<i class="fas fa-check"></i> Confirmar Orden';
+            newBtn.onclick = () => this.sendOrder();
+            
+            console.log('removeEditingMode - Botón restaurado para enviar pedido');
         }
+        
+        // Limpiar flag de edición
+        this.currentEditingOrderId = null;
         
         // Limpiar parámetros de URL si existen
         const url = new URL(window.location);
@@ -631,6 +672,12 @@ class SalesManager {
             console.log('=== CARGANDO PEDIDO PARA EDICIÓN ===');
             const orderIdNumber = parseInt(orderId);
             console.log('ID a cargar:', orderIdNumber);
+
+            // Evitar cargas duplicadas del mismo pedido
+            if (this.currentEditingOrderId === orderIdNumber) {
+                console.log('Pedido ya está siendo editado, saltando carga duplicada');
+                return;
+            }
 
             // Buscar el pedido
             const orders = this.db.getOrders();
@@ -678,6 +725,9 @@ class SalesManager {
             
             // Cambiar botón a modo actualización
             this.setUpdateMode(orderIdNumber);
+            
+            // Marcar pedido como siendo editado
+            this.currentEditingOrderId = orderIdNumber;
             
             this.showNotification(`Editando pedido #${orderIdNumber} - Mesa ${order.mesa}`, 'info');
             console.log('✅ Pedido cargado para edición exitosamente');
@@ -736,8 +786,15 @@ class SalesManager {
     setUpdateMode(orderId) {
         const confirmBtn = document.getElementById('confirmOrderBtn');
         if (confirmBtn) {
-            confirmBtn.innerHTML = '<i class="fas fa-save"></i> Actualizar Pedido';
-            confirmBtn.onclick = () => this.updateOrder(orderId);
+            // Limpiar listeners previos clonando el botón
+            const newBtn = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
+            
+            // Configurar para modo actualización
+            newBtn.innerHTML = '<i class="fas fa-save"></i> Actualizar Pedido';
+            newBtn.onclick = () => this.updateOrder(orderId);
+            
+            console.log('setUpdateMode - Botón configurado para actualizar pedido:', orderId);
         }
     }
 
@@ -755,6 +812,75 @@ class SalesManager {
         });
         
         this.cart = consolidated;
+    }
+
+    // Actualizar pedido existente sin eliminar y recrear
+    updateExistingOrder(originalOrderId) {
+        try {
+            console.log('=== ACTUALIZANDO PEDIDO EXISTENTE ===');
+            console.log('ID del pedido a actualizar:', originalOrderId);
+
+            const orderIdNumber = parseInt(originalOrderId);
+            const orders = JSON.parse(localStorage.getItem('pos_orders') || '[]');
+            
+            // Buscar el pedido original
+            const orderIndex = orders.findIndex(o => parseInt(o.id) === orderIdNumber);
+            if (orderIndex === -1) {
+                console.error('Pedido no encontrado:', orderIdNumber);
+                this.showNotification('Error: Pedido no encontrado', 'error');
+                return false;
+            }
+
+            const originalOrder = orders[orderIndex];
+            
+            // Verificar si se puede editar
+            if (['pagado', 'cancelado'].includes(originalOrder.estado)) {
+                this.showNotification('No se puede editar un pedido pagado o cancelado', 'error');
+                return false;
+            }
+
+            // Construir datos actualizados preservando información crítica
+            console.log('Items actuales en cart:', this.cart);
+            console.log('Items actuales en currentOrder:', this.currentOrder.items);
+            console.log('Total actual en currentOrder:', this.currentOrder.total);
+            
+            // Validar que hay items para actualizar (usar this.cart que es donde están los items reales)
+            if (!this.cart || this.cart.length === 0) {
+                console.error('No hay items en el carrito para actualizar');
+                this.showNotification('Error: No hay items en el carrito para actualizar', 'error');
+                return false;
+            }
+
+            const updatedOrderData = {
+                ...originalOrder, // Preservar toda la información original
+                items: this.cart.map(item => ({
+                    productId: item.product.id,
+                    productName: item.product.nombre || item.product.name,
+                    quantity: item.quantity,
+                    unitPrice: item.product.precio || item.product.price,
+                    subtotal: item.subtotal,
+                    estado: 'pendiente'
+                })), // Convertir carrito al formato correcto
+                total: this.currentOrder.total, // Actualizar total
+                observaciones: this.currentOrder.observaciones || '', // Actualizar observaciones
+                // Preservar: id, fecha, hora, mesa, estado, tipo
+            };
+
+            console.log('Datos del pedido actualizado:', updatedOrderData);
+
+            // Actualizar el pedido en el array
+            orders[orderIndex] = updatedOrderData;
+
+            // Guardar en localStorage
+            localStorage.setItem('pos_orders', JSON.stringify(orders));
+
+            console.log('✅ Pedido actualizado exitosamente');
+            return true;
+
+        } catch (error) {
+            console.error('Error actualizando pedido existente:', error);
+            return false;
+        }
     }
 
     updateOrder(originalOrderId) {
@@ -777,22 +903,16 @@ class SalesManager {
             console.log('=== INICIANDO ACTUALIZACIÓN DE PEDIDO ===');
             console.log('ID del pedido a actualizar:', originalOrderId);
 
-            // 1. ELIMINAR PEDIDO ORIGINAL DE FORMA ATÓMICA
-            const success = this.deleteOrderById(originalOrderId);
+            // Usar actualización in-place en lugar de delete+create
+            const success = this.updateExistingOrder(originalOrderId);
             if (!success) {
-                this.showNotification('Error: No se pudo eliminar el pedido original', 'error');
                 return;
             }
 
-            // 2. CREAR NUEVO PEDIDO CON LOS DATOS ACTUALES
-            const newOrderData = this.buildNewOrderData();
-            const newOrderId = this.saveNewOrder(newOrderData);
-
-            // 3. ACTUALIZAR ASIGNACIÓN DE MESA
-            this.updateTableAssignment(originalOrderId, newOrderId);
-
-            // 4. LIMPIAR INTERFAZ Y NOTIFICAR
-            this.finishOrderUpdate(newOrderId);
+            // Limpiar interfaz y notificar (sin salir del modo edición)
+            this.clearOrderFormWithoutExitingEditMode();
+            this.updateCartDisplay();
+            this.showNotification('Pedido actualizado exitosamente', 'success');
 
             console.log('=== ACTUALIZACIÓN COMPLETADA EXITOSAMENTE ===');
 
@@ -1269,6 +1389,12 @@ class SalesManager {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Evitar doble inicialización
+    if (window.salesManager) {
+        console.log('SalesManager ya está inicializado, saltando inicialización duplicada');
+        return;
+    }
+    
     window.salesManager = new SalesManager();
 });
 
@@ -1371,16 +1497,6 @@ style.textContent = `
 `;
 
 document.head.appendChild(style);
-
-// Inicializar el gestor cuando se carga la página
-document.addEventListener('DOMContentLoaded', () => {
-    try {
-        window.salesManager = new SalesManager();
-    } catch (error) {
-        console.error('Error al inicializar SalesManager:', error);
-        alert('Error al cargar el sistema de ventas. Verifique que todos los archivos estén cargados correctamente.');
-    }
-});
 
 // Función auxiliar para refrescar datos
 function refreshData() {

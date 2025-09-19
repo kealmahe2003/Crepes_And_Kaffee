@@ -27,10 +27,10 @@ class AuthGuard {
             // this.setupServerConnectionMonitoring();
         });
         
-        // Verificar sesión cada 15 segundos (más frecuente)
+        // Verificar sesión cada 60 segundos (reducido para menos logs)
         setInterval(() => {
             this.validateSession();
-        }, 15000);
+        }, 60000);
         
         // Verificar cuando la página reciba el foco
         window.addEventListener('focus', () => {
@@ -94,7 +94,7 @@ class AuthGuard {
             try {
                 if (!this.auth.validateSession()) {
                     console.log('[AuthGuard] Sesión INVÁLIDA, redirigiendo a login');
-                    this.forceLogin('Su sesión ha expirado');
+                    this.forceLogin('Sesión no válida');
                     return;
                 }
             } catch (error) {
@@ -124,7 +124,7 @@ class AuthGuard {
         // Si estamos en login, no validar
         if (window.location.pathname.includes('login.html')) return;
         
-        console.log('[AuthGuard] validateSession called on:', window.location.pathname);
+        console.debug('[AuthGuard] validateSession called on:', window.location.pathname);
         
         // Verificar si hay usuario logueado
         if (!this.auth.isLoggedIn()) {
@@ -136,11 +136,11 @@ class AuthGuard {
         // Verificar validez de la sesión con try-catch para capturar errores
         try {
             const sessionValid = this.auth.validateSession();
-            console.log('[AuthGuard] Session validation result:', sessionValid);
+            console.debug('[AuthGuard] Session validation result:', sessionValid);
             
             if (!sessionValid) {
                 console.log('[AuthGuard] Session invalid, forcing login');
-                this.forceLogin('Su sesión ha expirado');
+                this.forceLogin('Sesión no válida');
                 return false;
             }
         } catch (error) {
@@ -402,29 +402,10 @@ class AuthGuard {
     }
 
     setupInactivityLogout() {
-        let inactivityTimer;
-        const INACTIVITY_TIME = 60 * 60 * 1000; // 60 minutos
-
-        const resetTimer = () => {
-            clearTimeout(inactivityTimer);
-            inactivityTimer = setTimeout(() => {
-                if (confirm('Su sesión ha expirado por inactividad. ¿Desea continuar?')) {
-                    resetTimer(); // Resetear si el usuario quiere continuar
-                } else {
-                    this._redirecting = true;
-                    this.auth.logout();
-                    // No hacer redirección manual aquí
-                }
-            }, INACTIVITY_TIME);
-        };
-
-        // Eventos que resetean el timer
-        ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'].forEach(event => {
-            document.addEventListener(event, resetTimer, true);
-        });
-
-        // Iniciar el timer
-        resetTimer();
+        // Funcionalidad de timeout de sesión deshabilitada
+        // Las sesiones ya no expiran por inactividad
+        console.log('[AuthGuard] Timeout de sesión por inactividad deshabilitado');
+        return;
     }
 
     // Método para mostrar notificaciones de autenticación

@@ -94,8 +94,15 @@ class CajaManager {
         // Ver historial
         if (buttonId === 'viewHistoryBtn') {
             e.preventDefault();
-            console.log('✅ [CajaManager] Click en ver historial');
-            this.showHistoryModal();
+            e.stopPropagation();
+            console.log('✅ [CajaManager] Click en ver historial - EJECUTANDO');
+            try {
+                this.showHistoryModal();
+                console.log('✅ [CajaManager] Modal de historial mostrado exitosamente');
+            } catch (error) {
+                console.error('❌ [CajaManager] Error mostrando modal de historial:', error);
+                this.showNotification('❌ Error mostrando historial: ' + error.message, 'error');
+            }
             return;
         }
         
@@ -871,15 +878,15 @@ class CajaManager {
                             <div class="financial-grid">
                                 <div class="financial-item">
                                     <span class="label">Monto inicial:</span>
-                                    <span class="value">$${closedSession.initialAmount.toLocaleString()}</span>
+                                    <span class="value">$${(closedSession.initialAmount || 0).toLocaleString()}</span>
                                 </div>
                                 <div class="financial-item">
                                     <span class="label">Ventas totales:</span>
-                                    <span class="value">$${closedSession.totalSales.toLocaleString()}</span>
+                                    <span class="value">$${(closedSession.totalSales || 0).toLocaleString()}</span>
                                 </div>
                                 <div class="financial-item">
                                     <span class="label">Efectivo contado:</span>
-                                    <span class="value">$${closedSession.finalAmount.toLocaleString()}</span>
+                                    <span class="value">$${(closedSession.finalAmount || 0).toLocaleString()}</span>
                                 </div>
                                 <div class="financial-item ${closedSession.difference === 0 ? 'perfect' : closedSession.difference > 0 ? 'surplus' : 'deficit'}">
                                     <span class="label">Diferencia:</span>
@@ -946,14 +953,32 @@ class CajaManager {
     }
 
     calculateSessionDuration(session) {
-        const start = new Date(session.openedAt);
-        const end = new Date(session.closedAt);
-        const duration = end - start;
-        
-        const hours = Math.floor(duration / (1000 * 60 * 60));
-        const minutes = Math.floor((duration % (1000 * 60 * 60)) / (1000 * 60));
-        
-        return `${hours}h ${minutes}m`;
+        try {
+            if (!session.closedAt) {
+                return 'Sesión activa';
+            }
+            
+            const start = new Date(session.openedAt);
+            const end = new Date(session.closedAt);
+            
+            if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+                return 'Fecha inválida';
+            }
+            
+            const duration = end - start;
+            
+            if (duration < 0) {
+                return 'Duración inválida';
+            }
+            
+            const hours = Math.floor(duration / (1000 * 60 * 60));
+            const minutes = Math.floor((duration % (1000 * 60 * 60)) / (1000 * 60));
+            
+            return `${hours}h ${minutes}m`;
+        } catch (error) {
+            console.error('❌ [CajaManager] Error en calculateSessionDuration:', error, session);
+            return 'Error';
+        }
     }
 
     // === MOVIMIENTOS DE CAJA ===
@@ -1071,13 +1096,52 @@ class CajaManager {
     showHistoryModal() {
         console.log('📜 [CajaManager] Iniciando showHistoryModal');
         
-        const sessions = this.db.getCashSessions();
-        const recentSessions = sessions.slice(-10).reverse(); // Últimas 10 sesiones
-        
-        const modal = document.createElement('div');
-        modal.className = 'modal active'; // Agregar 'active' para que sea visible
-        modal.id = 'historyModal';
+        try {
+            // Verificar que la base de datos esté disponible
+            if (!this.db || typeof this.db.getCashSessions !== 'function') {
+                throw new Error('Base de datos no disponible o método getCashSessions no encontrado');
+            }
+            
+            const sessions = this.db.getCashSessions();
+            console.log('📜 [CajaManager] Sesiones obtenidas:', sessions.length);
+            
+            const recentSessions = sessions.slice(-10).reverse(); // Últimas 10 sesiones
+            console.log('📜 [CajaManager] Sesiones recientes:', recentSessions.length);
+            
+            // Diagnosticar sesiones con valores null
+            recentSessions.forEach((session, index) => {
+                if (session.totalSales === null || session.totalSales === undefined) {
+                    console.warn(`⚠️ [CajaManager] Sesión ${index} tiene totalSales null/undefined:`, session);
+                }
+                if (session.difference === null || session.difference === undefined) {
+                    console.warn(`⚠️ [CajaManager] Sesión ${index} tiene difference null/undefined:`, session);
+                }
+                if (session.initialAmount === null || session.initialAmount === undefined) {
+                    console.warn(`⚠️ [CajaManager] Sesión ${index} tiene initialAmount null/undefined:`, session);
+                }
+                if (session.finalAmount === null || session.finalAmount === undefined) {
+                    console.warn(`⚠️ [CajaManager] Sesión ${index} tiene finalAmount null/undefined:`, session);
+                }
+            });
+            
+            // Cerrar modal existente si hay uno
+            const existingModal = document.getElementById('historyModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            const modal = document.createElement('div');
+            modal.className = 'modal active'; // Agregar 'active' para que sea visible
+            modal.id = 'historyModal';
         modal.innerHTML = `
+            <style>
+                .error-row {
+                    background-color: #ffebee !important;
+                    color: #c62828 !important;
+                    font-weight: bold;
+                    text-align: center;
+                }
+            </style>
             <div class="modal-content" style="max-width: 900px;">
                 <div class="modal-header">
                     <h3>📜 Historial de Sesiones</h3>
@@ -1100,27 +1164,51 @@ class CajaManager {
                                 </tr>
                             </thead>
                             <tbody>
-                                ${recentSessions.map(session => `
-                                    <tr>
-                                        <td>${new Date(session.openedAt).toLocaleDateString()}</td>
-                                        <td>${session.userName}</td>
-                                        <td>${session.status === 'closed' ? this.calculateSessionDuration(session) : 'Activa'}</td>
-                                        <td>$${session.totalSales.toLocaleString()}</td>
-                                        <td class="${session.difference === 0 ? 'perfect' : session.difference > 0 ? 'surplus' : 'deficit'}">
-                                            ${session.difference >= 0 ? '+' : ''}$${session.difference.toLocaleString()}
-                                        </td>
-                                        <td>
-                                            <span class="status ${session.status}">
-                                                ${session.status === 'open' ? '🟢 Abierta' : '🔴 Cerrada'}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <button class="btn btn-sm btn-secondary" onclick="cajaManager.viewSessionDetails(${session.id})">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                `).join('')}
+                                ${recentSessions.map((session, index) => {
+                                    try {
+                                        console.log(`🔍 [CajaManager] Procesando sesión ${index}:`, {
+                                            id: session.id,
+                                            totalSales: session.totalSales,
+                                            difference: session.difference,
+                                            initialAmount: session.initialAmount,
+                                            finalAmount: session.finalAmount,
+                                            openedAt: session.openedAt,
+                                            closedAt: session.closedAt,
+                                            status: session.status
+                                        });
+                                        
+                                        const durationText = session.status === 'closed' ? this.calculateSessionDuration(session) : 'Activa';
+                                        
+                                        return `
+                                        <tr>
+                                            <td>${new Date(session.openedAt).toLocaleDateString()}</td>
+                                            <td>${session.userName || 'Sin usuario'}</td>
+                                            <td>${durationText}</td>
+                                            <td>$${(session.totalSales || 0).toLocaleString()}</td>
+                                            <td class="${(session.difference || 0) === 0 ? 'perfect' : (session.difference || 0) > 0 ? 'surplus' : 'deficit'}">
+                                                ${(session.difference || 0) >= 0 ? '+' : ''}$${Math.abs(session.difference || 0).toLocaleString()}
+                                            </td>
+                                            <td>
+                                                <span class="status ${session.status}">
+                                                    ${session.status === 'open' ? '🟢 Abierta' : '🔴 Cerrada'}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-sm btn-secondary" onclick="cajaManager.viewSessionDetails(${session.id})">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </td>
+                                        </tr>`;
+                                    } catch (error) {
+                                        console.error(`❌ [CajaManager] Error procesando sesión ${index}:`, error, session);
+                                        return `
+                                        <tr>
+                                            <td colspan="7" class="error-row">
+                                                Error procesando sesión ${session.id || 'desconocida'}
+                                            </td>
+                                        </tr>`;
+                                    }
+                                }).join('')}
                             </tbody>
                         </table>
                     </div>
@@ -1134,6 +1222,12 @@ class CajaManager {
         `;
         
         document.body.appendChild(modal);
+        console.log('📜 [CajaManager] Modal de historial creado y agregado al DOM');
+        
+        } catch (error) {
+            console.error('❌ [CajaManager] Error en showHistoryModal:', error);
+            this.showNotification('❌ Error mostrando historial: ' + error.message, 'error');
+        }
     }
 
     viewSessionDetails(sessionId) {
@@ -1175,16 +1269,16 @@ class CajaManager {
                             ` : ''}
                             <div class="summary-item">
                                 <span class="label">Monto inicial:</span>
-                                <span class="value">$${session.initialAmount.toLocaleString()}</span>
+                                <span class="value">$${(session.initialAmount || 0).toLocaleString()}</span>
                             </div>
                             <div class="summary-item">
                                 <span class="label">Total ventas:</span>
-                                <span class="value">$${session.totalSales.toLocaleString()}</span>
+                                <span class="value">$${(session.totalSales || 0).toLocaleString()}</span>
                             </div>
                             ${session.status === 'closed' ? `
                             <div class="summary-item">
                                 <span class="label">Monto final:</span>
-                                <span class="value">$${session.finalAmount.toLocaleString()}</span>
+                                <span class="value">$${(session.finalAmount || 0).toLocaleString()}</span>
                             </div>
                             <div class="summary-item">
                                 <span class="label">Diferencia:</span>
@@ -1521,12 +1615,12 @@ class CajaManager {
                 </table>
                 
                 <table class="info-table">
-                    <tr><th>Monto inicial:</th><td>$${session.initialAmount.toLocaleString()}</td></tr>
-                    <tr><th>Ventas totales:</th><td>$${session.totalSales.toLocaleString()}</td></tr>
-                    <tr><th>Efectivo contado:</th><td>$${session.finalAmount.toLocaleString()}</td></tr>
-                    <tr class="difference ${session.difference === 0 ? 'perfect' : session.difference > 0 ? 'surplus' : 'deficit'}">
+                    <tr><th>Monto inicial:</th><td>$${(session.initialAmount || 0).toLocaleString()}</td></tr>
+                    <tr><th>Ventas totales:</th><td>$${(session.totalSales || 0).toLocaleString()}</td></tr>
+                    <tr><th>Efectivo contado:</th><td>$${(session.finalAmount || 0).toLocaleString()}</td></tr>
+                    <tr class="difference ${(session.difference || 0) === 0 ? 'perfect' : (session.difference || 0) > 0 ? 'surplus' : 'deficit'}">
                         <th>Diferencia:</th>
-                        <td>${session.difference >= 0 ? '+' : ''}$${session.difference.toLocaleString()}</td>
+                        <td>${(session.difference || 0) >= 0 ? '+' : ''}$${Math.abs(session.difference || 0).toLocaleString()}</td>
                     </tr>
                 </table>
                 

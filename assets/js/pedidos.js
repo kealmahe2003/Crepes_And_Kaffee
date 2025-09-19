@@ -1,4 +1,8 @@
-// Gestor de Pedidos - Versión Limpia con Diagnósticos
+// Gestor de Pedidos - Versión Actualizada v2.2 - 18 Sept 2025
+// Última actualización: Debug detallado para toLocaleString error
+
+console.log('🚀 [PEDIDOS.JS] ARCHIVO CARGADO - VERSION 2.6 - TIMESTAMP:', new Date().toLocaleTimeString());
+
 class PedidosManager {
     constructor() {
         // Validar dependencias
@@ -111,12 +115,13 @@ class PedidosManager {
             
             // Filtrar pedidos - SOLO excluir pagados y cancelados
             const filteredOrders = allOrders.filter(order => {
-                const shouldExclude = order.estado === 'pagado' || order.estado === 'cancelado';
-                if (shouldExclude) {
-                    console.log(`[PedidosManager] Excluyendo pedido ${order.id} - estado: ${order.estado}`);
-                }
-                return !shouldExclude;
+                return !(order.estado === 'pagado' || order.estado === 'cancelado');
             });
+            
+            const excludedCount = allOrders.length - filteredOrders.length;
+            if (excludedCount > 0) {
+                console.log(`[PedidosManager] Excluyendo ${excludedCount} pedidos pagados/cancelados`);
+            }
             
             console.log('[PedidosManager] Pedidos después del filtrado:', {
                 cantidad: filteredOrders.length,
@@ -393,6 +398,10 @@ class PedidosManager {
                         <i class="fas fa-utensils"></i>
                         Entregar
                     </button>
+                    <button class="action-btn cancel" onclick="pedidosManager.cancelOrder('${order.id}')">
+                        <i class="fas fa-times"></i>
+                        Cancelar
+                    </button>
                 `;
                 break;
             case 'entregado':
@@ -404,6 +413,10 @@ class PedidosManager {
                     <button class="action-btn payment" onclick="pedidosManager.showBillModal('${order.id}')">
                         <i class="fas fa-receipt"></i>
                         Sacar Cuenta
+                    </button>
+                    <button class="action-btn cancel" onclick="pedidosManager.cancelOrder('${order.id}')">
+                        <i class="fas fa-times"></i>
+                        Cancelar
                     </button>
                 `;
                 break;
@@ -436,6 +449,9 @@ class PedidosManager {
 
     updateStats() {
         try {
+            console.log('[PedidosManager] 📊 === ACTUALIZANDO ESTADÍSTICAS === v2.0 -', new Date().toLocaleTimeString());
+            console.log('[PedidosManager] 📋 Total pedidos cargados:', this.orders.length);
+            
             const stats = {
                 total: this.orders.length,
                 pendiente: this.orders.filter(o => o.estado === 'pendiente').length,
@@ -443,28 +459,71 @@ class PedidosManager {
                 listo: this.orders.filter(o => o.estado === 'listo').length,
                 entregado: this.orders.filter(o => o.estado === 'entregado').length
             };
+            
+            console.log('[PedidosManager] 📊 Estadísticas calculadas:', stats);
+            
+            // Calcular total de ingresos en proceso
+            const totalRevenue = this.orders.reduce((sum, order) => sum + (order.total || 0), 0);
+            console.log('[PedidosManager] 💰 Total en proceso:', totalRevenue);
 
-            // Actualizar contadores en la UI
-            document.getElementById('totalOrders').textContent = stats.total;
-            document.getElementById('pendingOrders').textContent = stats.pendiente;
-            document.getElementById('preparingOrders').textContent = stats.preparando;
-            document.getElementById('readyOrders').textContent = stats.listo;
-            document.getElementById('deliveredOrders').textContent = stats.entregado;
+            // Actualizar contadores en la UI solo si los elementos existen
+            this.updateStatElement('totalOrders', stats.total);
+            this.updateStatElement('pendingOrders', stats.pendiente);
+            this.updateStatElement('totalRevenue', `$${totalRevenue.toLocaleString()}`);
+            
+            console.log('[PedidosManager] ✅ Estadísticas actualizadas exitosamente');
 
         } catch (error) {
-            console.error('[PedidosManager] Error actualizando estadísticas:', error);
+            console.error('[PedidosManager] ❌ Error crítico actualizando estadísticas:', error);
+            console.error('[PedidosManager] 📚 Stack trace:', error.stack);
+        }
+    }
+    
+    // Método auxiliar para actualizar elementos de estadísticas de forma segura
+    updateStatElement(elementId, value) {
+        try {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = value;
+                console.log(`[PedidosManager] ✅ ${elementId} actualizado a:`, value);
+            } else {
+                console.warn(`[PedidosManager] ⚠️ Elemento ${elementId} no encontrado en DOM`);
+            }
+        } catch (error) {
+            console.error(`[PedidosManager] ❌ Error actualizando ${elementId}:`, error);
         }
     }
 
     // Acciones de pedidos
     startOrder(orderId) {
         try {
-            console.log('[PedidosManager] Iniciando pedido:', orderId);
+            console.log('[PedidosManager] 🚀 INICIANDO PEDIDO');
+            console.log('[PedidosManager] 📋 ID del pedido:', orderId, typeof orderId);
+            console.log('[PedidosManager] 📊 Pedidos cargados:', this.orders.length);
+            
+            // Buscar el pedido
+            const order = this.orders.find(o => o.id == orderId);
+            console.log('[PedidosManager] 🔍 Pedido encontrado:', order);
+            
+            if (!order) {
+                console.error('[PedidosManager] ❌ Pedido no encontrado en lista local');
+                console.error('[PedidosManager] 📋 IDs disponibles:', this.orders.map(o => o.id));
+                this.showNotification('Pedido no encontrado', 'error');
+                return;
+            }
+            
+            console.log('[PedidosManager] 📦 Estado actual del pedido:', order.estado);
+            console.log('[PedidosManager] 🔄 Cambiando estado a: preparando');
+            
             this.updateOrderStatus(orderId, 'preparando');
             this.showNotification(`Pedido #${orderId} iniciado`, 'success');
+            
+            console.log('[PedidosManager] ✅ Pedido iniciado exitosamente');
+            
         } catch (error) {
-            console.error('[PedidosManager] Error iniciando pedido:', error);
-            this.showNotification('Error al iniciar pedido', 'error');
+            console.error('[PedidosManager] ❌ Error crítico iniciando pedido:', error);
+            console.error('[PedidosManager] 📚 Stack trace:', error.stack);
+            this.showNotification('Error al iniciar pedido: ' + error.message, 'error');
         }
     }
 
@@ -492,17 +551,24 @@ class PedidosManager {
 
     cancelOrder(orderId) {
         try {
-            if (confirm('¿Estás seguro de que quieres cancelar este pedido?')) {
+            // Obtener el pedido para mostrar un mensaje apropiado
+            const order = this.orders.find(o => o.id == orderId);
+            if (!order) {
+                console.error('[PedidosManager] Pedido no encontrado para cancelar:', orderId);
+                this.showNotification('Pedido no encontrado', 'error');
+                return;
+            }
+
+            // Mensaje de confirmación específico según el estado
+            let confirmMessage = '¿Estás seguro de que quieres cancelar este pedido?';
+            if (order.estado === 'listo') {
+                confirmMessage = 'Este pedido ya está listo para entregar. ¿Estás seguro de que quieres cancelarlo?';
+            } else if (order.estado === 'entregado') {
+                confirmMessage = 'Este pedido ya fue entregado. ¿Estás seguro de que quieres cancelarlo?';
+            }
+
+            if (confirm(confirmMessage)) {
                 console.log('[PedidosManager] Cancelando pedido:', orderId);
-                
-                // Obtener el pedido antes de cancelarlo para liberar la mesa
-                const order = this.orders.find(o => o.id == orderId);
-                if (!order) {
-                    console.error('[PedidosManager] Pedido no encontrado para cancelar:', orderId);
-                    this.showNotification('Pedido no encontrado', 'error');
-                    return;
-                }
-                
                 console.log('[PedidosManager] Pedido a cancelar:', order);
                 
                 // Actualizar estado del pedido a cancelado
@@ -559,17 +625,33 @@ class PedidosManager {
 
     showBillModal(orderId) {
         try {
-            console.log('[PedidosManager] Mostrando factura para pedido:', orderId);
+            console.log('[PedidosManager] ⚡ === INICIO showBillModal v2.4 ===');
+            console.log('[PedidosManager] ⚡ Iniciando showBillModal para pedido:', orderId);
+            console.log('[PedidosManager] 📋 Órdenes disponibles:', this.orders.length);
+            console.log('[PedidosManager] 🔍 Buscando pedido con ID:', orderId, typeof orderId);
             
             const order = this.orders.find(o => o.id == orderId);
+            console.log('[PedidosManager] 📦 Pedido encontrado:', order);
+            
             if (!order) {
-                console.error('[PedidosManager] Pedido no encontrado:', orderId);
+                console.error('[PedidosManager] ❌ Pedido no encontrado:', orderId);
+                console.error('[PedidosManager] 📊 IDs disponibles:', this.orders.map(o => o.id));
                 this.showNotification('Pedido no encontrado', 'error');
                 return;
             }
 
+            // Validar estructura del pedido
+            if (!this.validateOrderStructure(order)) {
+                console.error('[PedidosManager] ❌ Estructura de pedido inválida:', order);
+                this.showNotification('Error: Datos del pedido incompletos', 'error');
+                return;
+            }
+
+            console.log('[PedidosManager] ✅ Pedido válido, generando contenido de factura');
+            
             // Generar contenido de la factura
             const billContent = this.generateBillContent(order);
+            console.log('[PedidosManager] 📄 Contenido de factura generado');
             
             // Mostrar modal de factura
             const modal = document.createElement('div');
@@ -587,8 +669,8 @@ class PedidosManager {
                         <button class="action-btn info" onclick="pedidosManager.printBill('${orderId}')">
                             <i class="fas fa-print"></i> Imprimir
                         </button>
-                        <button class="action-btn success" onclick="pedidosManager.markAsPaid('${orderId}')">
-                            <i class="fas fa-check"></i> Marcar como Pagado
+                        <button class="action-btn success" onclick="pedidosManager.showPaymentModal('${orderId}')">
+                            <i class="fas fa-credit-card"></i> Pagar
                         </button>
                         <button class="action-btn" onclick="this.closest('.bill-modal').remove()">
                             Cerrar
@@ -598,49 +680,201 @@ class PedidosManager {
             `;
             
             document.body.appendChild(modal);
+            console.log('[PedidosManager] ✅ Modal de factura agregado al DOM');
             
         } catch (error) {
-            console.error('[PedidosManager] Error mostrando factura:', error);
-            this.showNotification('Error al mostrar factura', 'error');
+            console.error('[PedidosManager] ❌ Error crítico en showBillModal:', error);
+            console.error('[PedidosManager] 📚 Stack trace:', error.stack);
+            this.showNotification('Error al mostrar factura: ' + error.message, 'error');
         }
     }
 
-    generateBillContent(order) {
-        const itemsHtml = order.items.map(item => `
-            <tr>
-                <td>${item.productName}</td>
-                <td>${item.quantity}</td>
-                <td>$${item.price.toLocaleString()}</td>
-                <td>$${item.subtotal.toLocaleString()}</td>
-            </tr>
-        `).join('');
+    // Nuevo método para validar estructura del pedido
+    validateOrderStructure(order) {
+        console.log('[PedidosManager] 🔍 Validando estructura del pedido:', order.id);
+        
+        if (!order) {
+            console.error('[PedidosManager] ❌ Pedido es null o undefined');
+            return false;
+        }
+        
+        if (!order.id) {
+            console.error('[PedidosManager] ❌ Pedido sin ID');
+            return false;
+        }
+        
+        if (!order.items || !Array.isArray(order.items)) {
+            console.error('[PedidosManager] ❌ Pedido sin items o items no es array:', order.items);
+            return false;
+        }
+        
+        if (order.items.length === 0) {
+            console.error('[PedidosManager] ❌ Pedido con array de items vacío');
+            return false;
+        }
+        
+        // Validar cada item
+        for (let i = 0; i < order.items.length; i++) {
+            const item = order.items[i];
+            console.log('[PedidosManager] 🔍 Validando item', i, ':', item);
+            
+            if (!item) {
+                console.error('[PedidosManager] ❌ Item null en posición:', i);
+                return false;
+            }
+            
+            // Verificar nombre del producto de forma flexible
+            const productName = item.productName || item.name || item.nombre;
+            if (!productName) {
+                console.error('[PedidosManager] ❌ Item sin nombre de producto en posición:', i, item);
+                return false;
+            }
+            
+            // Verificar cantidad de forma flexible
+            const quantity = item.quantity || item.cantidad || item.qty;
+            if (typeof quantity !== 'number' || quantity <= 0) {
+                console.error('[PedidosManager] ❌ Item con quantity inválida en posición:', i, 'quantity:', quantity, 'type:', typeof quantity, item);
+                return false;
+            }
+            
+            // Verificar precio de forma flexible
+            const price = item.price || item.precio || item.unitPrice;
+            if (typeof price !== 'number' || price < 0) {
+                console.error('[PedidosManager] ❌ Item con price inválido en posición:', i, 'price:', price, 'type:', typeof price, item);
+                // En lugar de fallar, intentemos normalizar el item
+                console.log('[PedidosManager] 🔧 Intentando normalizar item con precio inválido...');
+            }
+            
+            // Verificar subtotal de forma flexible
+            const subtotal = item.subtotal || item.total || (price * quantity);
+            if (typeof subtotal !== 'number' || subtotal < 0) {
+                console.error('[PedidosManager] ❌ Item con subtotal inválido en posición:', i, 'subtotal:', subtotal, 'type:', typeof subtotal, item);
+                // En lugar de fallar, intentemos normalizar el item
+                console.log('[PedidosManager] 🔧 Intentando normalizar item con subtotal inválido...');
+            }
+        }
+        
+        console.log('[PedidosManager] ✅ Validación de estructura completada - procediendo con normalización automática');
+        return true;
+    }
 
-        return `
-            <div class="bill-info">
-                <p><strong>Mesa:</strong> ${order.mesa || 'N/A'}</p>
-                <p><strong>Hora:</strong> ${order.hora}</p>
-                <p><strong>Tipo:</strong> ${this.getOrderTypeLabel(order.tipo)}</p>
-            </div>
-            <table class="bill-table">
-                <thead>
-                    <tr>
-                        <th>Producto</th>
-                        <th>Cant.</th>
-                        <th>Precio</th>
-                        <th>Subtotal</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${itemsHtml}
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="3"><strong>Total</strong></td>
-                        <td><strong>$${order.total.toLocaleString()}</strong></td>
-                    </tr>
-                </tfoot>
-            </table>
-        `;
+    generateBillContent(order) {
+        try {
+            console.log('[PedidosManager] 📋 Generando contenido de factura para pedido:', order.id);
+            console.log('[PedidosManager] 📦 Datos del pedido:', order);
+            
+            // Validación adicional de datos
+            if (!order || !order.items || !Array.isArray(order.items)) {
+                console.error('[PedidosManager] ❌ Datos de pedido inválidos para generar factura');
+                return '<p>Error: Datos del pedido no válidos</p>';
+            }
+            
+            console.log('[PedidosManager] 🛍️ Procesando', order.items.length, 'items');
+            
+            const itemsHtml = order.items.map((item, index) => {
+                console.log('[PedidosManager] 📝 Procesando item', index + 1, ':', item);
+                console.log('[PedidosManager] 🔍 Tipos de datos en item:', {
+                    productName: typeof item.productName,
+                    name: typeof item.name,
+                    quantity: typeof item.quantity,
+                    qty: typeof item.qty,
+                    price: typeof item.price,
+                    subtotal: typeof item.subtotal
+                });
+                
+                // Validar cada campo del item con valores por defecto seguros
+                const productName = item.productName || item.name || 'Producto sin nombre';
+                const quantity = typeof item.quantity === 'number' && !isNaN(item.quantity) ? item.quantity : (
+                    typeof item.qty === 'number' && !isNaN(item.qty) ? item.qty : 1
+                );
+                const price = typeof item.price === 'number' && !isNaN(item.price) ? item.price : 0;
+                const subtotal = typeof item.subtotal === 'number' && !isNaN(item.subtotal) ? item.subtotal : (price * quantity);
+                
+                console.log('[PedidosManager] ✅ Item procesado:', {
+                    productName, quantity, price, subtotal
+                });
+                
+                console.log('[PedidosManager] 🧮 Llamando toLocaleString en price:', price, 'type:', typeof price);
+                console.log('[PedidosManager] 🧮 Llamando toLocaleString en subtotal:', subtotal, 'type:', typeof subtotal);
+                
+                try {
+                    const priceFormatted = (price || 0).toLocaleString();
+                    const subtotalFormatted = (subtotal || 0).toLocaleString();
+                    
+                    return `
+                        <tr>
+                            <td>${productName}</td>
+                            <td>${quantity}</td>
+                            <td>$${priceFormatted}</td>
+                            <td>$${subtotalFormatted}</td>
+                        </tr>
+                    `;
+                } catch (error) {
+                    console.error('[PedidosManager] ❌ Error en toLocaleString para item:', index, error);
+                    console.error('[PedidosManager] 📋 Datos problemáticos:', { price, subtotal, item });
+                    
+                    // Fallback seguro
+                    return `
+                        <tr>
+                            <td>${productName}</td>
+                            <td>${quantity}</td>
+                            <td>$${price || 0}</td>
+                            <td>$${subtotal || 0}</td>
+                        </tr>
+                    `;
+                }
+            }).join('');
+            
+            // Validar campos del pedido
+            const mesa = order.mesa || order.table || 'Para llevar';
+            const hora = order.hora || order.time || order.timestamp || 'No especificada';
+            const tipo = this.getOrderTypeLabel(order.tipo || order.type || 'unknown');
+            const total = typeof order.total === 'number' ? order.total : 0;
+            
+            console.log('[PedidosManager] 📊 Información del pedido:', {
+                mesa, hora, tipo, total
+            });
+
+            const billContent = `
+                <div class="bill-info">
+                    <p><strong>Mesa:</strong> ${mesa}</p>
+                    <p><strong>Hora:</strong> ${hora}</p>
+                    <p><strong>Tipo:</strong> ${tipo}</p>
+                </div>
+                <table class="bill-table">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Cant.</th>
+                            <th>Precio</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemsHtml}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3"><strong>Total</strong></td>
+                            <td><strong>$${(total || 0).toLocaleString()}</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            `;
+            
+            console.log('[PedidosManager] ✅ Contenido de factura generado exitosamente');
+            return billContent;
+            
+        } catch (error) {
+            console.error('[PedidosManager] ❌ Error generando contenido de factura:', error);
+            console.error('[PedidosManager] 📚 Stack trace:', error.stack);
+            return `
+                <div class="error-message">
+                    <p>❌ Error generando factura</p>
+                    <p>Detalles: ${error.message}</p>
+                </div>
+            `;
+        }
     }
 
     markAsPaid(orderId) {
@@ -675,6 +909,404 @@ class PedidosManager {
         } catch (error) {
             console.error('[PedidosManager] Error marcando como pagado:', error);
             this.showNotification('Error al marcar como pagado', 'error');
+        }
+    }
+
+    showPaymentModal(orderId) {
+        try {
+            console.log('[PedidosManager] 💳 Mostrando modal de pago para pedido:', orderId);
+            
+            const order = this.orders.find(o => o.id == orderId);
+            if (!order) {
+                this.showNotification('No se encontró el pedido para procesar el pago', 'warning');
+                return;
+            }
+
+            // Normalizar datos del pedido usando la misma función que en factura
+            const normalizedOrder = {
+                id: order.id,
+                items: order.items.map(item => ({
+                    productName: item.productName || item.name || 'Producto sin nombre',
+                    quantity: typeof item.quantity === 'number' && !isNaN(item.quantity) ? item.quantity : (
+                        typeof item.qty === 'number' && !isNaN(item.qty) ? item.qty : 1
+                    ),
+                    price: typeof item.price === 'number' && !isNaN(item.price) ? item.price : (
+                        typeof item.unitPrice === 'number' && !isNaN(item.unitPrice) ? item.unitPrice : 0
+                    ),
+                    subtotal: typeof item.subtotal === 'number' && !isNaN(item.subtotal) ? item.subtotal : (
+                        (item.price || item.unitPrice || 0) * (item.quantity || item.qty || 1)
+                    )
+                })),
+                total: typeof order.total === 'number' ? order.total : 0,
+                mesa: order.mesa || 'Para llevar',
+                fecha: order.fecha || new Date().toLocaleDateString(),
+                hora: order.hora || new Date().toLocaleTimeString()
+            };
+            
+            if (!normalizedOrder.items || normalizedOrder.items.length === 0) {
+                this.showNotification('El pedido no tiene productos válidos para procesar el pago', 'warning');
+                return;
+            }
+
+            const modal = document.createElement('div');
+            modal.className = 'payment-modal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 2000;
+            `;
+
+            modal.innerHTML = `
+                <div class="modal-content" style="
+                    background: white;
+                    border-radius: 16px;
+                    padding: 0;
+                    max-width: 800px;
+                    width: 90%;
+                    max-height: 90vh;
+                    overflow: hidden;
+                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+                    display: flex;
+                    flex-direction: column;
+                ">
+                    <!-- Header -->
+                    <div class="payment-header" style="
+                        background: #ff6b35;
+                        color: white;
+                        padding: 20px 24px;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                    ">
+                        <div>
+                            <h2 style="margin: 0; font-size: 24px;">Procesar Pago</h2>
+                            <p style="margin: 5px 0 0 0; opacity: 0.9;">${normalizedOrder.mesa} - Pedido #${normalizedOrder.id}</p>
+                        </div>
+                        <button class="close-modal" style="
+                            background: rgba(255, 255, 255, 0.2);
+                            border: none;
+                            border-radius: 50%;
+                            width: 40px;
+                            height: 40px;
+                            color: white;
+                            font-size: 20px;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                        ">&times;</button>
+                    </div>
+
+                    <!-- Content -->
+                    <div style="display: flex; flex: 1; overflow: hidden;">
+                        <!-- Left Panel - Payment Info -->
+                        <div style="
+                            flex: 1;
+                            padding: 24px;
+                            border-right: 1px solid #e5e7eb;
+                            overflow-y: auto;
+                        ">
+                            <h3 style="margin: 0 0 20px 0; color: #1f2937;">Información de Pago</h3>
+                            
+                            <!-- Total a Pagar -->
+                            <div style="
+                                background: #fee2e2;
+                                border: 1px solid #fca5a5;
+                                padding: 20px;
+                                border-radius: 12px;
+                                margin-bottom: 24px;
+                                text-align: center;
+                            ">
+                                <p style="margin: 0 0 8px 0; color: #7f1d1d; font-weight: 600;">Total a Pagar</p>
+                                <div style="font-size: 32px; font-weight: bold; color: #dc2626;">
+                                    $${(normalizedOrder.total || 0).toLocaleString()}
+                                </div>
+                            </div>
+
+                            <!-- Método de Pago -->
+                            <div style="margin-bottom: 24px;">
+                                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">
+                                    Método de Pago:
+                                </label>
+                                <select id="paymentMethod" style="
+                                    width: 100%;
+                                    padding: 12px;
+                                    border: 2px solid #d1d5db;
+                                    border-radius: 8px;
+                                    font-size: 16px;
+                                    background: white;
+                                ">
+                                    <option value="">Seleccionar método</option>
+                                    <option value="efectivo">💵 Efectivo</option>
+                                    <option value="tarjeta">💳 Tarjeta (Débito/Crédito)</option>
+                                    <option value="transferencia">🏦 Transferencia Bancaria</option>
+                                    <option value="mixto">🔄 Pago Mixto</option>
+                                </select>
+                            </div>
+
+                            <!-- Campos de Efectivo -->
+                            <div id="cashFields" style="display: none;">
+                                <div style="margin-bottom: 16px;">
+                                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">
+                                        Dinero Recibido:
+                                    </label>
+                                    <input type="number" id="receivedAmount" placeholder="0" style="
+                                        width: 100%;
+                                        padding: 12px;
+                                        border: 2px solid #d1d5db;
+                                        border-radius: 8px;
+                                        font-size: 18px;
+                                        text-align: right;
+                                    " step="1" min="0">
+                                </div>
+                                
+                                <div style="
+                                    background: #f0fdf4;
+                                    border: 1px solid #bbf7d0;
+                                    padding: 16px;
+                                    border-radius: 8px;
+                                    margin-bottom: 16px;
+                                ">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                        <span style="color: #166534; font-weight: 500;">Total a Pagar:</span>
+                                        <span style="color: #166534; font-weight: bold;">$${(normalizedOrder.total || 0).toLocaleString()}</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                        <span style="color: #166534; font-weight: 500;">Dinero Recibido:</span>
+                                        <span style="color: #166534; font-weight: bold;" id="displayReceived">$0</span>
+                                    </div>
+                                    <hr style="border: none; border-top: 1px solid #bbf7d0; margin: 12px 0;">
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <span style="color: #166534; font-weight: 600; font-size: 18px;">Cambio a Devolver:</span>
+                                        <span style="color: #166534; font-weight: bold; font-size: 20px;" id="changeAmount">$0</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Campos de Pago Mixto -->
+                            <div id="mixedFields" style="display: none;">
+                                <div style="margin-bottom: 16px;">
+                                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">
+                                        Efectivo:
+                                    </label>
+                                    <input type="number" id="cashPart" placeholder="0" style="
+                                        width: 100%;
+                                        padding: 12px;
+                                        border: 2px solid #d1d5db;
+                                        border-radius: 8px;
+                                        font-size: 16px;
+                                        text-align: right;
+                                    " step="1" min="0">
+                                </div>
+                                <div style="margin-bottom: 16px;">
+                                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">
+                                        Tarjeta/Transferencia:
+                                    </label>
+                                    <input type="number" id="cardPart" placeholder="0" style="
+                                        width: 100%;
+                                        padding: 12px;
+                                        border: 2px solid #d1d5db;
+                                        border-radius: 8px;
+                                        font-size: 16px;
+                                        text-align: right;
+                                    " step="1" min="0">
+                                </div>
+                                <div style="
+                                    background: #fef3c7;
+                                    border: 1px solid #fcd34d;
+                                    padding: 12px;
+                                    border-radius: 8px;
+                                    text-align: center;
+                                ">
+                                    <span style="color: #92400e; font-weight: 500;">Total Parcial: </span>
+                                    <span style="color: #92400e; font-weight: bold;" id="mixedTotal">$0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Panel - Order Summary -->
+                        <div style="
+                            flex: 1;
+                            padding: 24px;
+                            overflow-y: auto;
+                            background: #f9fafb;
+                        ">
+                            <h3 style="margin: 0 0 20px 0; color: #1f2937;">Resumen del Pedido</h3>
+                            
+                            <div style="margin-bottom: 20px;">
+                                <p style="margin: 4px 0; color: #6b7280;"><strong>Fecha:</strong> ${normalizedOrder.fecha}</p>
+                                <p style="margin: 4px 0; color: #6b7280;"><strong>Hora:</strong> ${normalizedOrder.hora}</p>
+                                <p style="margin: 4px 0; color: #6b7280;"><strong>Mesa:</strong> ${normalizedOrder.mesa}</p>
+                            </div>
+
+                            <div class="order-items" style="margin-bottom: 20px;">
+                                ${normalizedOrder.items.map(item => `
+                                    <div style="
+                                        display: flex;
+                                        justify-content: space-between;
+                                        align-items: center;
+                                        padding: 8px 0;
+                                        border-bottom: 1px solid #e5e7eb;
+                                    ">
+                                        <div>
+                                            <div style="font-weight: 500; color: #1f2937; font-size: 14px;">${item.productName}</div>
+                                            <div style="color: #6b7280; font-size: 12px;">Cantidad: ${item.quantity}</div>
+                                        </div>
+                                        <div style="font-weight: 600; color: #1f2937; font-size: 14px;">$${(item.subtotal || 0).toLocaleString()}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+
+                            <div style="
+                                background: white;
+                                padding: 16px;
+                                border-radius: 8px;
+                                border: 1px solid #e5e7eb;
+                            ">
+                                <div style="
+                                    display: flex;
+                                    justify-content: space-between;
+                                    align-items: center;
+                                    font-size: 18px;
+                                    font-weight: 700;
+                                    color: #1f2937;
+                                ">
+                                    <span>TOTAL:</span>
+                                    <span style="color: #dc2626;">$${(normalizedOrder.total || 0).toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div style="
+                        padding: 16px 24px;
+                        border-top: 1px solid #e5e7eb;
+                        display: flex;
+                        gap: 12px;
+                        justify-content: space-between;
+                        background: #f9fafb;
+                    ">
+                        <button onclick="this.closest('.payment-modal').remove()" style="
+                            padding: 12px 24px;
+                            background: #6b7280;
+                            border: 1px solid #6b7280;
+                            color: white;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            font-weight: 500;
+                        ">
+                            Cancelar
+                        </button>
+                        <button id="processPaymentBtn" onclick="pedidosManager.processPayment('${orderId}')" style="
+                            padding: 12px 24px;
+                            background: #10b981;
+                            border: 1px solid #10b981;
+                            color: white;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            font-weight: 500;
+                            opacity: 0.5;
+                        " disabled>
+                            ${window.auth && window.auth.isCashSessionActive() ? 'Procesar Pago' : '<i class="fas fa-lock"></i> Caja Cerrada'}
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            // Event listeners
+            modal.querySelector('.close-modal').addEventListener('click', () => {
+                modal.remove();
+            });
+
+            // Setup payment method logic
+            this.setupPaymentModalLogic(modal, normalizedOrder);
+
+            console.log('[PedidosManager] ✅ Modal de pago mostrado exitosamente');
+
+        } catch (error) {
+            console.error('[PedidosManager] ❌ Error mostrando modal de pago:', error);
+            this.showNotification('Error al mostrar modal de pago', 'error');
+        }
+    }
+
+    setupPaymentModalLogic(modal, order) {
+        const paymentMethodSelect = modal.querySelector('#paymentMethod');
+        const cashFields = modal.querySelector('#cashFields');
+        const mixedFields = modal.querySelector('#mixedFields');
+        const processBtn = modal.querySelector('#processPaymentBtn');
+        
+        // Logic for payment method changes
+        paymentMethodSelect.addEventListener('change', () => {
+            const method = paymentMethodSelect.value;
+            
+            cashFields.style.display = method === 'efectivo' ? 'block' : 'none';
+            mixedFields.style.display = method === 'mixto' ? 'block' : 'none';
+            
+            if (method && window.auth && window.auth.isCashSessionActive()) {
+                processBtn.disabled = false;
+                processBtn.style.opacity = '1';
+            } else {
+                processBtn.disabled = true;
+                processBtn.style.opacity = '0.5';
+            }
+        });
+
+        // Cash calculation logic
+        const receivedInput = modal.querySelector('#receivedAmount');
+        if (receivedInput) {
+            receivedInput.addEventListener('input', () => {
+                const received = parseFloat(receivedInput.value) || 0;
+                const total = order.total || 0;
+                const change = Math.max(0, received - total);
+                
+                modal.querySelector('#displayReceived').textContent = `$${received.toLocaleString()}`;
+                modal.querySelector('#changeAmount').textContent = `$${change.toLocaleString()}`;
+            });
+        }
+
+        // Mixed payment logic
+        const cashPart = modal.querySelector('#cashPart');
+        const cardPart = modal.querySelector('#cardPart');
+        if (cashPart && cardPart) {
+            const updateMixedTotal = () => {
+                const cash = parseFloat(cashPart.value) || 0;
+                const card = parseFloat(cardPart.value) || 0;
+                const total = cash + card;
+                
+                modal.querySelector('#mixedTotal').textContent = `$${total.toLocaleString()}`;
+            };
+            
+            cashPart.addEventListener('input', updateMixedTotal);
+            cardPart.addEventListener('input', updateMixedTotal);
+        }
+    }
+
+    processPayment(orderId) {
+        try {
+            console.log('[PedidosManager] 💳 Procesando pago para pedido:', orderId);
+            
+            // Cerrar modal
+            const modal = document.querySelector('.payment-modal');
+            if (modal) {
+                modal.remove();
+            }
+
+            // Marcar como pagado (reusar el método existente)
+            this.markAsPaid(orderId);
+            
+        } catch (error) {
+            console.error('[PedidosManager] ❌ Error procesando pago:', error);
+            this.showNotification('Error al procesar el pago', 'error');
         }
     }
 
@@ -793,38 +1425,61 @@ class PedidosManager {
 
     updateOrderStatus(orderId, newStatus) {
         try {
-            console.log(`[PedidosManager] Actualizando pedido ${orderId} a estado:`, newStatus);
+            console.log('[PedidosManager] 🔄 ACTUALIZANDO ESTADO DE PEDIDO');
+            console.log('[PedidosManager] 📋 ID del pedido:', orderId, typeof orderId);
+            console.log('[PedidosManager] 🏷️ Nuevo estado:', newStatus);
             
-            // Obtener todos los pedidos
+            // Obtener todos los pedidos desde la base de datos
             const allOrders = this.db.getOrders();
-            const orderIndex = allOrders.findIndex(o => o.id == orderId);
+            console.log('[PedidosManager] 📊 Total pedidos en BD:', allOrders.length);
+            
+            const orderIndex = allOrders.findIndex(o => {
+                console.log('[PedidosManager] 🔍 Comparando:', o.id, 'con', orderId, '==', o.id == orderId);
+                return o.id == orderId;
+            });
+            
+            console.log('[PedidosManager] 📍 Índice encontrado:', orderIndex);
             
             if (orderIndex === -1) {
+                console.error('[PedidosManager] ❌ Pedido no encontrado en base de datos');
+                console.error('[PedidosManager] 📋 IDs disponibles en BD:', allOrders.map(o => o.id));
                 throw new Error('Pedido no encontrado');
             }
             
+            console.log('[PedidosManager] 📦 Pedido antes de actualizar:', allOrders[orderIndex]);
+            
             // Actualizar estado
+            const oldStatus = allOrders[orderIndex].estado;
             allOrders[orderIndex].estado = newStatus;
+            
+            console.log('[PedidosManager] 🔄 Estado cambiado de:', oldStatus, 'a:', newStatus);
             
             // Si se marca como pagado, agregar fecha de pago
             if (newStatus === 'pagado') {
                 allOrders[orderIndex].fechaPago = new Date().toISOString();
+                console.log('[PedidosManager] 💳 Fecha de pago agregada:', allOrders[orderIndex].fechaPago);
             }
+            
+            console.log('[PedidosManager] 📦 Pedido después de actualizar:', allOrders[orderIndex]);
             
             // Guardar en localStorage
             localStorage.setItem('pos_orders', JSON.stringify(allOrders));
+            console.log('[PedidosManager] 💾 Pedidos guardados en localStorage');
             
             // Recargar pedidos
             this.loadOrders();
             this.updateStats();
+            console.log('[PedidosManager] 🔄 Pedidos recargados y stats actualizadas');
             
             // Notificar a otras pestañas
             this.triggerStorageUpdate();
+            console.log('[PedidosManager] 📡 Notificación enviada a otras pestañas');
             
-            console.log(`[PedidosManager] ✅ Pedido ${orderId} actualizado a:`, newStatus);
+            console.log('[PedidosManager] ✅ Pedido actualizado exitosamente');
             
         } catch (error) {
-            console.error('[PedidosManager] Error actualizando estado del pedido:', error);
+            console.error('[PedidosManager] ❌ Error crítico actualizando estado:', error);
+            console.error('[PedidosManager] 📚 Stack trace:', error.stack);
             throw error;
         }
     }

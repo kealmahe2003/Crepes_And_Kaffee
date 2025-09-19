@@ -1585,13 +1585,65 @@ class MesasManager {
     }
 
     editOrder(orderId, tableNumber) {
-        // Redirigir a ventas con parámetros para editar el pedido
-        const params = new URLSearchParams({
-            mesa: tableNumber,
-            editOrder: orderId
-        });
-        
-        window.location.href = `ventas.html?${params.toString()}`;
+        try {
+            console.log('[MesasManager] 🚀 INICIANDO EDICIÓN DE PEDIDO');
+            console.log('[MesasManager] 📋 ID del pedido:', orderId, typeof orderId);
+            console.log('[MesasManager] 🪑 Mesa:', tableNumber, typeof tableNumber);
+            
+            // Validar parámetros
+            if (!orderId) {
+                console.error('[MesasManager] ❌ ID de pedido no válido:', orderId);
+                this.showNotification('Error: ID de pedido no válido', 'error');
+                return;
+            }
+            
+            if (!tableNumber) {
+                console.error('[MesasManager] ❌ Número de mesa no válido:', tableNumber);
+                this.showNotification('Error: Número de mesa no válido', 'error');
+                return;
+            }
+            
+            // Verificar que el pedido existe antes de redirigir
+            const orders = this.db.getOrders();
+            const order = orders.find(o => o.id == orderId);
+            
+            console.log('[MesasManager] 🔍 Buscando pedido con ID:', orderId);
+            console.log('[MesasManager] 📊 Total pedidos en BD:', orders.length);
+            console.log('[MesasManager] 📦 Pedido encontrado:', order);
+            
+            if (!order) {
+                console.error('[MesasManager] ❌ Pedido no encontrado en base de datos');
+                console.error('[MesasManager] 📋 IDs disponibles:', orders.map(o => o.id));
+                this.showNotification('Error: Pedido no encontrado', 'error');
+                return;
+            }
+            
+            // Verificar estado del pedido
+            if (order.estado === 'pagado' || order.estado === 'cancelado') {
+                console.error('[MesasManager] ❌ No se puede editar pedido en estado:', order.estado);
+                this.showNotification(`No se puede editar un pedido ${order.estado}`, 'error');
+                return;
+            }
+            
+            // Construir parámetros para la redirección
+            const params = new URLSearchParams({
+                mesa: tableNumber,
+                editOrder: orderId
+            });
+            
+            const redirectUrl = `ventas.html?${params.toString()}`;
+            console.log('[MesasManager] 🔗 URL de redirección:', redirectUrl);
+            
+            console.log('[MesasManager] ➡️ Redirigiendo a ventas para editar pedido');
+            
+            // Redirigir a ventas con parámetros para editar el pedido
+            window.location.href = redirectUrl;
+            
+        } catch (error) {
+            console.error('[MesasManager] ❌ Error crítico en editOrder:', error);
+            console.error('[MesasManager] 📚 Stack trace:', error.stack);
+            this.showNotification('Error al iniciar edición de pedido: ' + error.message, 'error');
+        }
     }
 
     markAsClean(tableNumber) {
