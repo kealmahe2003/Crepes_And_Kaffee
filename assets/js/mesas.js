@@ -727,6 +727,7 @@ class MesasManager {
                     body { 
                         font-family: 'Courier New', monospace; 
                         font-size: 11px; 
+                        font-weight: bold;
                         margin: 0;
                         padding: 4mm;
                         line-height: 1.2;
@@ -750,6 +751,7 @@ class MesasManager {
                     .header p {
                         margin: 2px 0;
                         font-size: 10px;
+                        font-weight: bold;
                     }
                     
                     .info-line {
@@ -757,6 +759,7 @@ class MesasManager {
                         justify-content: space-between;
                         margin: 3px 0;
                         font-size: 10px;
+                        font-weight: bold;
                     }
                     
                     .separator {
@@ -767,6 +770,7 @@ class MesasManager {
                     .item { 
                         margin: 6px 0; 
                         font-size: 10px;
+                        font-weight: bold;
                         word-wrap: break-word;
                     }
                     
@@ -793,7 +797,8 @@ class MesasManager {
                     
                     .item-details {
                         font-size: 9px;
-                        color: #555;
+                        color: #000;
+                        font-weight: bold;
                         margin-left: 2px;
                         display: flex;
                         justify-content: space-between;
@@ -810,6 +815,7 @@ class MesasManager {
                         display: flex;
                         justify-content: space-between;
                         font-size: 13px;
+                        font-weight: bold;
                         margin: 4px 0;
                     }
                     
@@ -819,6 +825,7 @@ class MesasManager {
                         border-top: 1px dashed #000;
                         padding-top: 8px;
                         font-size: 9px;
+                        font-weight: bold;
                         line-height: 1.3;
                     }
                     

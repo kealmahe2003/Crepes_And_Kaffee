@@ -1533,6 +1533,7 @@ class CajaManager {
                         padding: 2mm;
                         width: 72mm;
                         font-size: 10px;
+                        font-weight: bold;
                         line-height: 1.2;
                     }
                     .header { 
@@ -1549,10 +1550,12 @@ class CajaManager {
                     .header h2 { 
                         font-size: 12px; 
                         margin: 0 0 2px 0; 
+                        font-weight: bold;
                     }
                     .header p { 
                         font-size: 9px; 
                         margin: 2px 0; 
+                        font-weight: bold;
                     }
                     .info-section {
                         margin-bottom: 8px;
@@ -1565,6 +1568,7 @@ class CajaManager {
                         align-items: center;
                         margin-bottom: 1px;
                         font-size: 9px;
+                        font-weight: bold;
                     }
                     .info-line.highlight {
                         font-weight: bold;
@@ -1576,7 +1580,7 @@ class CajaManager {
                     }
                     .label { 
                         flex: 1; 
-                        font-weight: normal;
+                        font-weight: bold;
                         margin-right: 4px;
                     }
                     .value { 
@@ -1599,21 +1603,23 @@ class CajaManager {
                         display: flex;
                         justify-content: space-between;
                         font-size: 8px;
+                        font-weight: bold;
                         margin-bottom: 1px;
                         padding: 1px 0;
                     }
-                    .movement-time { width: 15%; }
-                    .movement-type { width: 20%; text-align: center; }
+                    .movement-time { width: 15%; font-weight: bold; }
+                    .movement-type { width: 20%; text-align: center; font-weight: bold; }
                     .movement-amount { width: 25%; text-align: right; font-weight: bold; }
-                    .movement-desc { width: 35%; text-align: left; font-size: 7px; }
+                    .movement-desc { width: 35%; text-align: left; font-size: 7px; font-weight: bold; }
                     .notes {
                         margin-top: 8px;
                         border-top: 1px dashed #000;
                         padding-top: 4px;
                         font-size: 7px;
+                        font-weight: bold;
                         line-height: 1.1;
                     }
-                    .notes p { margin: 1px 0; }
+                    .notes p { margin: 1px 0; font-weight: bold; }
                     @media print { 
                         body { margin: 0; padding: 2mm; }
                     }

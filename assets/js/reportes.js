@@ -514,6 +514,7 @@ class ReportesManager {
                         padding: 2mm;
                         width: 72mm;
                         font-size: 9px;
+                        font-weight: bold;
                         line-height: 1.2;
                     }
                     .header { 
@@ -530,10 +531,12 @@ class ReportesManager {
                     .header h2 { 
                         font-size: 12px; 
                         margin: 0 0 2px 0; 
+                        font-weight: bold;
                     }
                     .header p { 
                         font-size: 8px; 
                         margin: 1px 0; 
+                        font-weight: bold;
                     }
                     .section { 
                         margin-bottom: 8px;
@@ -557,6 +560,7 @@ class ReportesManager {
                         align-items: center;
                         padding: 2px 0;
                         font-size: 9px;
+                        font-weight: bold;
                         border-bottom: 1px dotted #ccc;
                     }
                     .metric:last-child { border-bottom: none; }
@@ -565,6 +569,7 @@ class ReportesManager {
                     .product-table {
                         width: 100%;
                         font-size: 7px;
+                        font-weight: bold;
                         margin-top: 4px;
                     }
                     .product-header {
@@ -576,10 +581,10 @@ class ReportesManager {
                         margin-bottom: 2px;
                         font-size: 8px;
                     }
-                    .product-header .col1 { width: 40%; }
-                    .product-header .col2 { width: 15%; text-align: center; }
-                    .product-header .col3 { width: 22%; text-align: right; }
-                    .product-header .col4 { width: 23%; text-align: right; }
+                    .product-header .col1 { width: 40%; font-weight: bold; }
+                    .product-header .col2 { width: 15%; text-align: center; font-weight: bold; }
+                    .product-header .col3 { width: 22%; text-align: right; font-weight: bold; }
+                    .product-header .col4 { width: 23%; text-align: right; font-weight: bold; }
                     .product-row {
                         display: flex;
                         justify-content: space-between;
@@ -587,6 +592,7 @@ class ReportesManager {
                         margin-bottom: 1px;
                         padding: 1px 0;
                         font-size: 7px;
+                        font-weight: bold;
                     }
                     .product-row .col1 { 
                         width: 40%; 
@@ -595,14 +601,15 @@ class ReportesManager {
                         text-overflow: ellipsis;
                         white-space: nowrap;
                     }
-                    .product-row .col2 { width: 15%; text-align: center; }
-                    .product-row .col3 { width: 22%; text-align: right; }
+                    .product-row .col2 { width: 15%; text-align: center; font-weight: bold; }
+                    .product-row .col3 { width: 22%; text-align: right; font-weight: bold; }
                     .product-row .col4 { width: 23%; text-align: right; font-weight: bold; }
                     .positive { color: #000; }
                     .negative { color: #000; }
                     .detail-note {
                         font-size: 7px;
                         font-style: italic;
+                        font-weight: bold;
                         text-align: center;
                         margin-bottom: 4px;
                     }
