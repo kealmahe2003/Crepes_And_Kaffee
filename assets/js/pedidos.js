@@ -709,8 +709,8 @@ class PedidosManager {
                 order.total = order.items.reduce((sum, item) => sum + (item.subtotal || item.precio * item.cantidad || 0), 0);
             }
 
-            // Crear ventana de impresión
-            const printWindow = window.open('', '_blank', 'width=300,height=600');
+            // Crear ventana de impresión optimizada para 80mm
+            const printWindow = window.open('', '_blank', 'width=300,height=700');
             const currentDate = new Date().toLocaleDateString('es-ES');
             const currentTime = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
             
@@ -719,72 +719,171 @@ class PedidosManager {
                 <head>
                     <title>Cuenta Pedido #${orderId}</title>
                     <style>
+                        @page {
+                            size: 80mm auto;
+                            margin: 0;
+                        }
+                        
                         body { 
                             font-family: 'Courier New', monospace; 
-                            font-size: 12px; 
-                            margin: 20px; 
-                            line-height: 1.4;
+                            font-size: 11px; 
+                            margin: 0;
+                            padding: 4mm;
+                            line-height: 1.2;
+                            width: 72mm;
+                            color: #000;
                         }
+                        
                         .header { 
                             text-align: center; 
-                            margin-bottom: 20px; 
+                            margin-bottom: 12px; 
                             border-bottom: 1px dashed #000;
-                            padding-bottom: 10px;
+                            padding-bottom: 8px;
                         }
-                        .item { 
-                            margin: 8px 0; 
-                            display: flex; 
-                            justify-content: space-between; 
-                            align-items: flex-start;
-                        }
-                        .item-name {
-                            flex: 1;
-                            margin-right: 10px;
-                        }
-                        .item-price {
-                            white-space: nowrap;
-                        }
-                        .total { 
-                            border-top: 2px solid #000; 
-                            margin-top: 15px; 
-                            padding-top: 10px; 
-                            font-weight: bold; 
+                        
+                        .header h2 {
+                            margin: 0 0 4px 0;
                             font-size: 14px;
+                            font-weight: bold;
                         }
-                        .footer {
-                            text-align: center;
-                            margin-top: 20px;
-                            border-top: 1px dashed #000;
-                            padding-top: 10px;
+                        
+                        .header p {
+                            margin: 2px 0;
                             font-size: 10px;
                         }
-                        @media print {
-                            body { margin: 0; }
+                        
+                        .info-line {
+                            display: flex;
+                            justify-content: space-between;
+                            margin: 3px 0;
+                            font-size: 10px;
+                        }
+                        
+                        .separator {
+                            border-top: 1px dashed #000;
+                            margin: 8px 0;
+                        }
+                        
+                        .item { 
+                            margin: 6px 0; 
+                            font-size: 10px;
+                            word-wrap: break-word;
+                        }
+                        
+                        .item-line {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: flex-start;
+                            margin-bottom: 2px;
+                        }
+                        
+                        .item-name {
+                            flex: 1;
+                            margin-right: 8px;
+                            font-weight: bold;
+                            line-height: 1.1;
+                        }
+                        
+                        .item-total {
+                            white-space: nowrap;
+                            font-weight: bold;
+                            min-width: 20mm;
+                            text-align: right;
+                        }
+                        
+                        .item-details {
+                            font-size: 9px;
+                            color: #555;
+                            margin-left: 2px;
+                            display: flex;
+                            justify-content: space-between;
+                        }
+                        
+                        .total { 
+                            border-top: 2px solid #000; 
+                            margin-top: 12px; 
+                            padding-top: 8px; 
+                            font-weight: bold; 
+                        }
+                        
+                        .total-line {
+                            display: flex;
+                            justify-content: space-between;
+                            font-size: 13px;
+                            margin: 4px 0;
+                        }
+                        
+                        .footer {
+                            text-align: center;
+                            margin-top: 12px;
+                            border-top: 1px dashed #000;
+                            padding-top: 8px;
+                            font-size: 9px;
+                            line-height: 1.3;
+                        }
+                        
+                        @media print { 
+                            body { 
+                                margin: 0; 
+                                padding: 2mm;
+                            } 
+                            button { display: none; }
+                            .no-print { display: none; }
+                        }
+                        
+                        @media screen {
+                            body {
+                                border: 1px solid #ccc;
+                                background: white;
+                                box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                            }
                         }
                     </style>
                 </head>
                 <body>
                     <div class="header">
-                        <h2>CRÊPES & KAFFEE</h2>
-                        <p>Cuenta de ${order.mesa ? `Mesa ${order.mesa}` : 'Pedido Directo'}</p>
-                        <p>Pedido #${orderId}</p>
-                        <p>${currentDate} ${currentTime}</p>
+                        <h2>CREPES & KAFFEE</h2>
+                        <p>Restaurante y Cafetería</p>
                     </div>
+                    
+                    <div class="info-line">
+                        <span>${order.mesa ? 'Mesa:' : 'Pedido:'}</span>
+                        <span><strong>${order.mesa ? order.mesa : 'Directo'}</strong></span>
+                    </div>
+                    <div class="info-line">
+                        <span>Pedido #:</span>
+                        <span><strong>${orderId}</strong></span>
+                    </div>
+                    <div class="info-line">
+                        <span>Fecha:</span>
+                        <span>${currentDate}</span>
+                    </div>
+                    <div class="info-line">
+                        <span>Hora:</span>
+                        <span>${currentTime}</span>
+                    </div>
+                    
+                    <div class="separator"></div>
+                    
+                    <div style="font-weight: bold; margin-bottom: 6px; font-size: 10px;">PRODUCTOS:</div>
                     
                     <div class="items">
                         ${order.items.map(item => `
                             <div class="item">
-                                <div class="item-name">
-                                    ${item.quantity || item.cantidad}x ${item.productName || item.nombre}
-                                    <br><small>$${(item.price || item.precio || 0).toLocaleString()} c/u</small>
+                                <div class="item-line">
+                                    <span class="item-name">${item.quantity || item.cantidad}x ${item.productName || item.nombre}</span>
+                                    <span class="item-total">$${(item.subtotal || 0).toLocaleString()}</span>
                                 </div>
-                                <div class="item-price">$${(item.subtotal || 0).toLocaleString()}</div>
+                                <div class="item-details">
+                                    <span>@ $${(item.price || item.precio || 0).toLocaleString()} c/u</span>
+                                    <span></span>
+                                </div>
                             </div>
                         `).join('')}
                     </div>
                     
                     <div class="total">
-                        <div style="display: flex; justify-content: space-between;">
+                        <div class="total-line">
                             <span>TOTAL A PAGAR:</span>
                             <span>$${order.total.toLocaleString()}</span>
                         </div>
@@ -792,8 +891,39 @@ class PedidosManager {
                     
                     <div class="footer">
                         <p>¡Gracias por su visita!</p>
-                        <p>Síguenos en nuestras redes sociales</p>
+                        <p>Vuelva pronto</p>
                     </div>
+                    
+                    <div class="no-print" style="text-align: center; margin-top: 15px;">
+                        <button onclick="window.print()" style="
+                            background: #2563eb;
+                            color: white;
+                            border: none;
+                            padding: 8px 16px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-size: 12px;
+                        ">🖨️ Imprimir</button>
+                        <button onclick="window.close()" style="
+                            background: #6b7280;
+                            color: white;
+                            border: none;
+                            padding: 8px 16px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-size: 12px;
+                            margin-left: 8px;
+                        ">❌ Cerrar</button>
+                    </div>
+                    
+                    <script>
+                        // Auto-imprimir después de cargar
+                        window.onload = function() {
+                            setTimeout(() => {
+                                window.print();
+                            }, 500);
+                        };
+                    </script>
                 </body>
                 </html>
             `);

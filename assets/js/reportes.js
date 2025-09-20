@@ -507,17 +507,109 @@ class ReportesManager {
             <head>
                 <title>Reporte de Ventas - Crêpes & Kaffee</title>
                 <style>
-                    body { font-family: Arial, sans-serif; margin: 20px; }
-                    .header { text-align: center; margin-bottom: 30px; }
-                    .section { margin-bottom: 25px; }
-                    .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
-                    .metric { border: 1px solid #ddd; padding: 10px; text-align: center; }
-                    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                    th { background-color: #f5f5f5; }
-                    .positive { color: green; }
-                    .negative { color: red; }
-                    @media print { body { margin: 0; } }
+                    @page { size: 80mm auto; margin: 4mm 2mm; }
+                    body { 
+                        font-family: Arial, sans-serif; 
+                        margin: 0; 
+                        padding: 2mm;
+                        width: 72mm;
+                        font-size: 9px;
+                        line-height: 1.2;
+                    }
+                    .header { 
+                        text-align: center; 
+                        margin-bottom: 8px;
+                        border-bottom: 1px dashed #000;
+                        padding-bottom: 4px;
+                    }
+                    .header h1 { 
+                        font-size: 14px; 
+                        margin: 0 0 2px 0; 
+                        font-weight: bold;
+                    }
+                    .header h2 { 
+                        font-size: 12px; 
+                        margin: 0 0 2px 0; 
+                    }
+                    .header p { 
+                        font-size: 8px; 
+                        margin: 1px 0; 
+                    }
+                    .section { 
+                        margin-bottom: 8px;
+                        border-bottom: 1px dashed #000;
+                        padding-bottom: 4px;
+                    }
+                    .section h3 {
+                        font-size: 11px;
+                        margin: 0 0 4px 0;
+                        text-align: center;
+                        font-weight: bold;
+                    }
+                    .metrics {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 2px;
+                    }
+                    .metric {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding: 2px 0;
+                        font-size: 9px;
+                        border-bottom: 1px dotted #ccc;
+                    }
+                    .metric:last-child { border-bottom: none; }
+                    .metric-label { font-weight: bold; }
+                    .metric-value { font-weight: bold; text-align: right; }
+                    .product-table {
+                        width: 100%;
+                        font-size: 7px;
+                        margin-top: 4px;
+                    }
+                    .product-header {
+                        display: flex;
+                        justify-content: space-between;
+                        font-weight: bold;
+                        border-bottom: 1px solid #000;
+                        padding-bottom: 2px;
+                        margin-bottom: 2px;
+                        font-size: 8px;
+                    }
+                    .product-header .col1 { width: 40%; }
+                    .product-header .col2 { width: 15%; text-align: center; }
+                    .product-header .col3 { width: 22%; text-align: right; }
+                    .product-header .col4 { width: 23%; text-align: right; }
+                    .product-row {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 1px;
+                        padding: 1px 0;
+                        font-size: 7px;
+                    }
+                    .product-row .col1 { 
+                        width: 40%; 
+                        font-weight: bold;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                    }
+                    .product-row .col2 { width: 15%; text-align: center; }
+                    .product-row .col3 { width: 22%; text-align: right; }
+                    .product-row .col4 { width: 23%; text-align: right; font-weight: bold; }
+                    .positive { color: #000; }
+                    .negative { color: #000; }
+                    .detail-note {
+                        font-size: 7px;
+                        font-style: italic;
+                        text-align: center;
+                        margin-bottom: 4px;
+                    }
+                    @media print { 
+                        body { margin: 0; padding: 2mm; }
+                        .positive, .negative { color: #000 !important; }
+                    }
                 </style>
             </head>
             <body>
@@ -532,84 +624,78 @@ class ReportesManager {
                     <h3>Resumen General</h3>
                     <div class="metrics">
                         <div class="metric">
-                            <strong>Total Ventas</strong><br>
-                            $${summary.overview.totalSales.toLocaleString()}
+                            <span class="metric-label">Total Ventas:</span>
+                            <span class="metric-value">$${summary.overview.totalSales.toLocaleString()}</span>
                         </div>
                         <div class="metric">
-                            <strong>Ganancia Total</strong><br>
-                            <span class="${summary.overview.totalProfit >= 0 ? 'positive' : 'negative'}">
+                            <span class="metric-label">Ganancia Total:</span>
+                            <span class="metric-value ${summary.overview.totalProfit >= 0 ? 'positive' : 'negative'}">
                                 $${summary.overview.totalProfit.toLocaleString()}
                             </span>
                         </div>
                         <div class="metric">
-                            <strong>Margen</strong><br>
-                            ${summary.overview.profitMargin.toFixed(1)}%
+                            <span class="metric-label">Margen:</span>
+                            <span class="metric-value">${summary.overview.profitMargin.toFixed(1)}%</span>
                         </div>
                     </div>
                 </div>
                 
                 <div class="section">
                     <h3>Productos Más Vendidos</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Producto</th>
-                                <th>Cantidad</th>
-                                <th>Ingresos</th>
-                                <th>Ganancia</th>
-                                <th>Margen</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${summary.topProducts.map(product => {
-                                const margin = product.revenue > 0 ? (product.profit / product.revenue) * 100 : 0;
-                                return `
-                                    <tr>
-                                        <td>${product.productName}</td>
-                                        <td>${product.quantitySold}</td>
-                                        <td>$${product.revenue.toLocaleString()}</td>
-                                        <td class="${product.profit >= 0 ? 'positive' : 'negative'}">
-                                            $${product.profit.toLocaleString()}
-                                        </td>
-                                        <td>${margin.toFixed(1)}%</td>
-                                    </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                    </table>
+                    <div class="product-table">
+                        <div class="product-header">
+                            <span class="col1">Producto</span>
+                            <span class="col2">Cant</span>
+                            <span class="col3">Ingresos</span>
+                            <span class="col4">Ganancia</span>
+                        </div>
+                        ${summary.topProducts.map(product => {
+                            const margin = product.revenue > 0 ? (product.profit / product.revenue) * 100 : 0;
+                            const productName = product.productName.length > 18 ? 
+                                product.productName.substring(0, 15) + '...' : 
+                                product.productName;
+                            return `
+                                <div class="product-row">
+                                    <span class="col1">${productName}</span>
+                                    <span class="col2">${product.quantitySold}</span>
+                                    <span class="col3">$${product.revenue.toLocaleString()}</span>
+                                    <span class="col4 ${product.profit >= 0 ? 'positive' : 'negative'}">
+                                        $${product.profit.toLocaleString()}
+                                    </span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
                 </div>
                 
                 ${allProductsSold && allProductsSold.length > 0 ? `
                 <div class="section">
-                    <h3>Detalle Completo de Productos Vendidos</h3>
-                    <p><em>Todos los productos vendidos en el período (${allProductsSold.length} productos diferentes)</em></p>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Producto</th>
-                                <th>Cantidad</th>
-                                <th>Ingresos</th>
-                                <th>Ganancia</th>
-                                <th>Margen</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${allProductsSold.map(product => {
-                                const margin = product.revenue > 0 ? (product.profit / product.revenue) * 100 : 0;
-                                return `
-                                    <tr>
-                                        <td>${product.productName}</td>
-                                        <td>${product.quantitySold}</td>
-                                        <td>$${product.revenue.toLocaleString()}</td>
-                                        <td class="${product.profit >= 0 ? 'positive' : 'negative'}">
-                                            $${product.profit.toLocaleString()}
-                                        </td>
-                                        <td>${margin.toFixed(1)}%</td>
-                                    </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                    </table>
+                    <h3>Detalle Completo</h3>
+                    <div class="detail-note">Todos los productos (${allProductsSold.length} diferentes)</div>
+                    <div class="product-table">
+                        <div class="product-header">
+                            <span class="col1">Producto</span>
+                            <span class="col2">Cant</span>
+                            <span class="col3">Ingresos</span>
+                            <span class="col4">Ganancia</span>
+                        </div>
+                        ${allProductsSold.map(product => {
+                            const margin = product.revenue > 0 ? (product.profit / product.revenue) * 100 : 0;
+                            const productName = product.productName.length > 18 ? 
+                                product.productName.substring(0, 15) + '...' : 
+                                product.productName;
+                            return `
+                                <div class="product-row">
+                                    <span class="col1">${productName}</span>
+                                    <span class="col2">${product.quantitySold}</span>
+                                    <span class="col3">$${product.revenue.toLocaleString()}</span>
+                                    <span class="col4 ${product.profit >= 0 ? 'positive' : 'negative'}">
+                                        $${product.profit.toLocaleString()}
+                                    </span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
                 </div>
                 ` : ''}
             </body>

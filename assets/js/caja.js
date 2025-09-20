@@ -1526,56 +1526,181 @@ class CajaManager {
             <head>
                 <title>Arqueo de Caja</title>
                 <style>
-                    body { font-family: Arial, sans-serif; margin: 20px; }
-                    .header { text-align: center; margin-bottom: 30px; }
-                    .info-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-                    .info-table th, .info-table td { padding: 8px; border: 1px solid #ddd; text-align: left; }
-                    .total { font-weight: bold; font-size: 16px; }
-                    .highlight { background-color: #e8f5e8; font-weight: bold; }
-                    @media print { body { margin: 0; } }
+                    @page { size: 80mm auto; margin: 4mm 2mm; }
+                    body { 
+                        font-family: Arial, sans-serif; 
+                        margin: 0; 
+                        padding: 2mm;
+                        width: 72mm;
+                        font-size: 10px;
+                        line-height: 1.2;
+                    }
+                    .header { 
+                        text-align: center; 
+                        margin-bottom: 8px;
+                        border-bottom: 1px dashed #000;
+                        padding-bottom: 4px;
+                    }
+                    .header h1 { 
+                        font-size: 14px; 
+                        margin: 0 0 2px 0; 
+                        font-weight: bold;
+                    }
+                    .header h2 { 
+                        font-size: 12px; 
+                        margin: 0 0 2px 0; 
+                    }
+                    .header p { 
+                        font-size: 9px; 
+                        margin: 2px 0; 
+                    }
+                    .info-section {
+                        margin-bottom: 8px;
+                        border-bottom: 1px dashed #000;
+                        padding-bottom: 4px;
+                    }
+                    .info-line {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 1px;
+                        font-size: 9px;
+                    }
+                    .info-line.highlight {
+                        font-weight: bold;
+                        font-size: 10px;
+                        border-top: 1px solid #000;
+                        border-bottom: 1px solid #000;
+                        padding: 2px 0;
+                        margin: 3px 0;
+                    }
+                    .label { 
+                        flex: 1; 
+                        font-weight: normal;
+                        margin-right: 4px;
+                    }
+                    .value { 
+                        font-weight: bold; 
+                        text-align: right;
+                        white-space: nowrap;
+                    }
+                    .movements-section {
+                        margin-top: 8px;
+                    }
+                    .movements-title {
+                        font-size: 10px;
+                        font-weight: bold;
+                        text-align: center;
+                        margin-bottom: 4px;
+                        border-bottom: 1px solid #000;
+                        padding-bottom: 2px;
+                    }
+                    .movement-line {
+                        display: flex;
+                        justify-content: space-between;
+                        font-size: 8px;
+                        margin-bottom: 1px;
+                        padding: 1px 0;
+                    }
+                    .movement-time { width: 15%; }
+                    .movement-type { width: 20%; text-align: center; }
+                    .movement-amount { width: 25%; text-align: right; font-weight: bold; }
+                    .movement-desc { width: 35%; text-align: left; font-size: 7px; }
+                    .notes {
+                        margin-top: 8px;
+                        border-top: 1px dashed #000;
+                        padding-top: 4px;
+                        font-size: 7px;
+                        line-height: 1.1;
+                    }
+                    .notes p { margin: 1px 0; }
+                    @media print { 
+                        body { margin: 0; padding: 2mm; }
+                    }
                 </style>
             </head>
             <body>
                 <div class="header">
                     <h1>CRÊPES & KAFFEE</h1>
                     <h2>Arqueo de Caja</h2>
-                    <p>Fecha: ${new Date().toLocaleString()}</p>
+                    <p>${new Date().toLocaleString()}</p>
                 </div>
                 
-                <table class="info-table">
-                    <tr><th>Cajero:</th><td>${session.userName}</td></tr>
-                    <tr><th>Apertura:</th><td>${new Date(session.openedAt).toLocaleString()}</td></tr>
-                    <tr><th>Monto inicial:</th><td>$${session.initialAmount.toLocaleString()}</td></tr>
-                    <tr style="background-color: #e8f4fd;"><th>💵 Efectivo recibido:</th><td>$${receivedCash.toLocaleString()}</td></tr>
-                    <tr><th>Efectivo esperado:</th><td>$${expectedCash.toLocaleString()}</td></tr>
-                    <tr><th>Transferencias recibidas:</th><td>$${transferencias.toLocaleString()}</td></tr>
-                    <tr style="background-color: #f0f8ff;"><th>💰 Entradas de caja:</th><td>+$${entradas.toLocaleString()}</td></tr>
-                    <tr style="background-color: #fff0f0;"><th>💸 Salidas de caja:</th><td>-$${salidas.toLocaleString()}</td></tr>
-                    <tr style="background-color: #f8f8f8;"><th>🔄 Movimientos netos:</th><td>${netMovements >= 0 ? '+' : ''}$${netMovements.toLocaleString()}</td></tr>
-                    <tr class="highlight"><th>Monto total (Efectivo + Transferencias):</th><td>$${montoTotal.toLocaleString()}</td></tr>
-                    <tr><th>Estado:</th><td>${session.status === 'open' ? 'Abierta' : 'Cerrada'}</td></tr>
-                </table>
+                <div class="info-section">
+                    <div class="info-line">
+                        <span class="label">Cajero:</span>
+                        <span class="value">${session.userName}</span>
+                    </div>
+                    <div class="info-line">
+                        <span class="label">Apertura:</span>
+                        <span class="value">${new Date(session.openedAt).toLocaleString()}</span>
+                    </div>
+                    <div class="info-line">
+                        <span class="label">Monto inicial:</span>
+                        <span class="value">$${session.initialAmount.toLocaleString()}</span>
+                    </div>
+                </div>
+                
+                <div class="info-section">
+                    <div class="info-line">
+                        <span class="label">💵 Efectivo recibido:</span>
+                        <span class="value">$${receivedCash.toLocaleString()}</span>
+                    </div>
+                    <div class="info-line">
+                        <span class="label">Efectivo esperado:</span>
+                        <span class="value">$${expectedCash.toLocaleString()}</span>
+                    </div>
+                    <div class="info-line">
+                        <span class="label">Transferencias:</span>
+                        <span class="value">$${transferencias.toLocaleString()}</span>
+                    </div>
+                </div>
+                
+                <div class="info-section">
+                    <div class="info-line">
+                        <span class="label">💰 Entradas:</span>
+                        <span class="value">+$${entradas.toLocaleString()}</span>
+                    </div>
+                    <div class="info-line">
+                        <span class="label">💸 Salidas:</span>
+                        <span class="value">-$${salidas.toLocaleString()}</span>
+                    </div>
+                    <div class="info-line">
+                        <span class="label">🔄 Movimientos netos:</span>
+                        <span class="value">${netMovements >= 0 ? '+' : ''}$${netMovements.toLocaleString()}</span>
+                    </div>
+                </div>
+                
+                <div class="info-line highlight">
+                    <span class="label">TOTAL (Efectivo + Transfer):</span>
+                    <span class="value">$${montoTotal.toLocaleString()}</span>
+                </div>
+                
+                <div class="info-line">
+                    <span class="label">Estado:</span>
+                    <span class="value">${session.status === 'open' ? 'Abierta' : 'Cerrada'}</span>
+                </div>
                 
                 ${movements.length > 0 ? `
-                <h3>📝 Detalle de Movimientos de Caja</h3>
-                <table class="info-table">
-                    <tr><th>Hora</th><th>Tipo</th><th>Monto</th><th>Descripción</th></tr>
+                <div class="movements-section">
+                    <div class="movements-title">📝 Detalle de Movimientos</div>
                     ${movements.map(movement => `
-                        <tr>
-                            <td>${new Date(movement.timestamp).toLocaleTimeString()}</td>
-                            <td>${movement.type === 'in' ? '💰 Entrada' : movement.type === 'out' ? '💸 Salida' : movement.type === 'opening' ? '🟢 Apertura' : '🔴 Cierre'}</td>
-                            <td>${movement.type === 'out' ? '-' : '+'}$${movement.amount.toLocaleString()}</td>
-                            <td>${movement.description}</td>
-                        </tr>
+                        <div class="movement-line">
+                            <span class="movement-time">${new Date(movement.timestamp).toLocaleTimeString().slice(0,5)}</span>
+                            <span class="movement-type">${movement.type === 'in' ? '💰' : movement.type === 'out' ? '💸' : movement.type === 'opening' ? '🟢' : '🔴'}</span>
+                            <span class="movement-amount">${movement.type === 'out' ? '-' : '+'}$${movement.amount.toLocaleString()}</span>
+                            <span class="movement-desc">${movement.description.length > 20 ? movement.description.substring(0, 17) + '...' : movement.description}</span>
+                        </div>
                     `).join('')}
-                </table>
+                </div>
                 ` : ''}
                 
-                <p><strong>Nota:</strong> Este documento es un arqueo de caja en tiempo real.</p>
-                <p><strong>Efectivo recibido:</strong> Dinero en efectivo generado durante la sesión (ventas + entradas - salidas) SIN incluir la base inicial</p>
-                <p><strong>Efectivo esperado:</strong> Incluye monto inicial + ventas en efectivo + parte efectivo de pagos mixtos + entradas - salidas</p>
-                <p><strong>Transferencias:</strong> Incluye ventas por transferencia + parte transferencia de pagos mixtos</p>
-                <p><strong>Movimientos de caja:</strong> Registra todas las entradas y salidas de dinero adicionales a las ventas</p>
+                <div class="notes">
+                    <p><strong>Nota:</strong> Arqueo de caja en tiempo real.</p>
+                    <p><strong>Efectivo recibido:</strong> Dinero generado en sesión (sin base inicial)</p>
+                    <p><strong>Efectivo esperado:</strong> Incluye base + ventas + movimientos</p>
+                    <p><strong>Transferencias:</strong> Ventas por transferencia + parte transfer de mixtos</p>
+                </div>
             </body>
             </html>
         `;
